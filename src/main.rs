@@ -7,6 +7,7 @@ extern crate rocket;
 
 mod db;
 mod models;
+mod repos;
 mod routes;
 mod services;
 
@@ -18,7 +19,6 @@ fn rocket() -> _ {
         .mount(
             "/",
             routes![
-                routes::v1::apps::read,
                 routes::v1::apps::get_apps,
                 routes::v1::apps::create_app,
                 routes::v1::envs::get_envs,
