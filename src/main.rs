@@ -30,36 +30,3 @@ fn rocket_from_config(figment: Figment) -> Rocket<Build> {
             ],
         )
 }
-
-#[cfg(test)]
-mod tests {
-    use super::rocket_from_config;
-    use rocket::figment::{
-        map,
-        value::{Map, Value},
-    };
-    use rocket::local::asynchronous::Client;
-    use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-
-    #[sqlx::test]
-    fn basic_test(
-        _pg_pool_options: PgPoolOptions,
-        pg_connect_options: PgConnectOptions,
-    ) -> sqlx::Result<()> {
-        let db_url = format!(
-            "postgres://postgres:configmonkey@localhost:5432/{}",
-            pg_connect_options.get_database().unwrap()
-        );
-        let db_config: Map<_, Value> = map! {
-            "url" => db_url.into(),
-        };
-        let figment = rocket::Config::figment()
-            .merge(("databases", map!["postgres_configmonkey" => db_config]));
-
-        let client = Client::tracked(rocket_from_config(figment))
-            .await
-            .expect("valid rocket instance");
-
-        Ok(())
-    }
-}

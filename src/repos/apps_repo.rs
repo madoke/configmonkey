@@ -36,7 +36,7 @@ pub async fn create_app(
     name: String,
 ) -> Result<App, String> {
     let result = sqlx::query_as::<_, AppEntity>(
-        "insert into apps(tenant, name, slug) values ('default', $1, $2) returning id, slug, name",
+        "insert into apps(tenant, slug, name) values ('default', $1, $2) returning id, slug, name",
     )
     .bind(slug)
     .bind(name)

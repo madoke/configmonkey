@@ -9,12 +9,12 @@ pub struct CreateAppInput<'r> {
     name: &'r str,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct AppDto {
-    id: String,
-    slug: String,
-    name: String,
+    pub id: String,
+    pub slug: String,
+    pub name: String,
 }
 
 #[get("/v1/apps")]
