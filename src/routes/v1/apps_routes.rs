@@ -102,7 +102,7 @@ pub async fn create_app(
 }
 
 #[derive(Responder)]
-#[response(status = 204)]
+#[response(status = 204, content_type = "json")]
 pub struct DeleteAppSuccess(());
 
 #[delete("/v1/apps/<slug>")]

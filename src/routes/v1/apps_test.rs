@@ -20,6 +20,21 @@ async fn h_create_app<'a>(client: &'a Client, app_slug: &str, app_name: &str) ->
         .await
 }
 
+async fn h_get_apps<'a>(client: &'a Client) -> Vec<AppDto> {
+    let response = client
+        .get(uri!(crate::routes::v1::apps_routes::get_apps))
+        .dispatch()
+        .await;
+
+    // assert response
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let response_body = response.into_string().await.expect("Response Body");
+    let apps: Vec<AppDto> = serde_json::from_str(&response_body.as_str()).expect("Valid App List");
+    apps
+}
+
 // test cases
 
 #[sqlx::test]
@@ -56,18 +71,10 @@ async fn get_apps_success(
     h_create_app(&client, "configmonkey", "Config Monkey").await;
 
     // get the list of apps
-    let response = client
-        .get(uri!(crate::routes::v1::apps_routes::get_apps))
-        .dispatch()
-        .await;
+    let apps = h_get_apps(&client).await;
 
-    // assert response
-    assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.content_type(), Some(ContentType::JSON));
-
-    //assert body
-    let response_body = response.into_string().await.expect("Response Body");
-    let apps: Vec<AppDto> = serde_json::from_str(&response_body.as_str()).expect("Valid App List");
+    //assert apps
+    assert_eq!(apps.len(), 1);
     assert_eq!(apps[0].slug, "configmonkey");
     assert_eq!(apps[0].name, "Config Monkey");
 
@@ -98,6 +105,37 @@ async fn err_duplicate_slug(
         error_message.message,
         "An app with the same slug already exists"
     );
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn delete_app_success(
+    _pg_pool_options: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
+
+    // create duplicate apps
+    h_create_app(&client, "configmonkey", "Config Monkey").await;
+
+    // delete app
+    let response = client
+        .delete(uri!(crate::routes::v1::apps_routes::delete_app(
+            "configmonkey"
+        )))
+        .dispatch()
+        .await;
+
+    // assert response
+    assert_eq!(response.status(), Status::NoContent);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    // get the list of apps
+    let apps = h_get_apps(&client).await;
+
+    //assert apps
+    assert_eq!(apps.len(), 0);
 
     Ok(())
 }

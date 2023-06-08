@@ -87,7 +87,7 @@ pub async fn create_app(
             })
         }
         Err(error) => {
-            error!("Error deleting app with slug: {}. Error: {:?}", slug, error);
+            error!("Error creating app with slug: {}. Error: {:?}", slug, error);
             Err(map_sqlx_error(error))
         }
     }
