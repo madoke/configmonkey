@@ -37,8 +37,8 @@ pub async fn get_apps(db: Connection<ConfigMonkeyDb>) -> Result<Vec<App>, AppsSe
 
 pub async fn create_app(
     db: Connection<ConfigMonkeyDb>,
-    slug: String,
-    name: String,
+    slug: &str,
+    name: &str,
 ) -> Result<App, AppsServiceError> {
     let result = apps_repo::create_app(db, slug, name).await;
     match result {
@@ -46,6 +46,19 @@ pub async fn create_app(
         Err(apps_repo_err) => match apps_repo_err {
             AppsRepoError::DuplicateSlug => Err(AppsServiceError::DuplicateSlug),
             AppsRepoError::Unknown => Err(AppsServiceError::Unknown),
+        },
+    }
+}
+
+pub async fn delete_app(
+    db: Connection<ConfigMonkeyDb>,
+    slug: &str,
+) -> Result<(), AppsServiceError> {
+    let result = apps_repo::delete_app(db, slug).await;
+    match result {
+        Ok(()) => Ok(()),
+        Err(apps_repo_err) => match apps_repo_err {
+            _ => Err(AppsServiceError::Unknown),
         },
     }
 }

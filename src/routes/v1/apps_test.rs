@@ -1,4 +1,4 @@
-use crate::routes::v1::apps::AppDto;
+use crate::routes::v1::apps_routes::AppDto;
 use crate::routes::v1::common::ErrorMessageDto;
 use crate::test::async_client_from_pg_connect_options;
 use rocket::http::ContentType;
@@ -13,7 +13,7 @@ use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 
 async fn h_create_app<'a>(client: &'a Client, app_slug: &str, app_name: &str) -> LocalResponse<'a> {
     client
-        .post(uri!(crate::routes::v1::apps::create_app))
+        .post(uri!(crate::routes::v1::apps_routes::create_app))
         .header(ContentType::JSON)
         .body(json!({"slug": app_slug, "name": app_name }).to_string())
         .dispatch()
@@ -57,7 +57,7 @@ async fn get_apps_success(
 
     // get the list of apps
     let response = client
-        .get(uri!(crate::routes::v1::apps::get_apps))
+        .get(uri!(crate::routes::v1::apps_routes::get_apps))
         .dispatch()
         .await;
 

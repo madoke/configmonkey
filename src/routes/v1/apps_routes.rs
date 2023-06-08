@@ -56,15 +56,11 @@ pub async fn get_apps(db: Connection<ConfigMonkeyDb>) -> GetAppsResponse {
     };
 }
 
-#[derive(Responder)]
-#[response(status = 201, content_type = "json")]
-pub struct CreateAppSuccess(Json<AppDto>);
+pub struct AppsRoutesError(AppsServiceError);
 
-pub struct CreateAppError(AppsServiceError);
-
-impl<'r> Responder<'r, 'static> for CreateAppError {
+impl<'r> Responder<'r, 'static> for AppsRoutesError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
-        let CreateAppError(apps_service_error) = self;
+        let AppsRoutesError(apps_service_error) = self;
         let status = match apps_service_error {
             AppsServiceError::DuplicateSlug => Status::Conflict,
             _ => Status::InternalServerError,
@@ -82,12 +78,16 @@ impl<'r> Responder<'r, 'static> for CreateAppError {
     }
 }
 
+#[derive(Responder)]
+#[response(status = 201, content_type = "json")]
+pub struct CreateAppSuccess(Json<AppDto>);
+
 #[post("/v1/apps", format = "application/json", data = "<input>")]
 pub async fn create_app(
     db: Connection<ConfigMonkeyDb>,
     input: Json<CreateAppInput<'_>>,
-) -> Result<CreateAppSuccess, CreateAppError> {
-    let result = apps_svc::create_app(db, String::from(input.slug), String::from(input.name)).await;
+) -> Result<CreateAppSuccess, AppsRoutesError> {
+    let result = apps_svc::create_app(db, input.slug, input.name).await;
 
     return match result {
         Ok(app) => Ok(CreateAppSuccess(Json(AppDto {
@@ -97,6 +97,23 @@ pub async fn create_app(
             created_at: app.created_at,
             updated_at: app.updated_at,
         }))),
-        Err(err) => Err(CreateAppError(err)),
+        Err(err) => Err(AppsRoutesError(err)),
+    };
+}
+
+#[derive(Responder)]
+#[response(status = 204)]
+pub struct DeleteAppSuccess(());
+
+#[delete("/v1/apps/<slug>")]
+pub async fn delete_app(
+    db: Connection<ConfigMonkeyDb>,
+    slug: &str,
+) -> Result<DeleteAppSuccess, AppsRoutesError> {
+    let result = apps_svc::delete_app(db, slug).await;
+
+    return match result {
+        Ok(()) => Ok(DeleteAppSuccess(())),
+        Err(err) => Err(AppsRoutesError(err)),
     };
 }

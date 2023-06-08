@@ -23,8 +23,9 @@ fn rocket_from_config(figment: Figment) -> Rocket<Build> {
         .mount(
             "/",
             routes![
-                routes::v1::apps::get_apps,
-                routes::v1::apps::create_app,
+                routes::v1::apps_routes::get_apps,
+                routes::v1::apps_routes::create_app,
+                routes::v1::apps_routes::delete_app,
                 routes::v1::envs::get_envs,
                 routes::v1::configs::get_configs
             ],
