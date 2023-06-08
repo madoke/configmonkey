@@ -1,9 +1,9 @@
-use std::io::Cursor;
-
+use super::common::ErrorMessageDto;
 use crate::{
     db::db::ConfigMonkeyDb,
     services::apps_svc::{self, AppsServiceError},
 };
+use chrono::{DateTime, Utc};
 use rocket::{
     http::{ContentType, Status},
     response::Responder,
@@ -11,8 +11,7 @@ use rocket::{
     Request, Response,
 };
 use rocket_db_pools::Connection;
-
-use super::common::ErrorMessageDto;
+use std::io::Cursor;
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -27,6 +26,8 @@ pub struct AppDto {
     pub id: String,
     pub slug: String,
     pub name: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Responder)]
@@ -45,6 +46,8 @@ pub async fn get_apps(db: Connection<ConfigMonkeyDb>) -> GetAppsResponse {
                     name: app.name,
                     slug: app.slug,
                     id: app.id,
+                    created_at: app.created_at,
+                    updated_at: app.updated_at,
                 });
             }
             GetAppsResponse(Json(appdtos))
@@ -91,6 +94,8 @@ pub async fn create_app(
             name: app.name,
             slug: app.slug,
             id: app.id,
+            created_at: app.created_at,
+            updated_at: app.updated_at,
         }))),
         Err(err) => Err(CreateAppError(err)),
     };

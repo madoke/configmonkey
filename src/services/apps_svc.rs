@@ -45,6 +45,7 @@ pub async fn create_app(
         Ok(created_app) => Ok(created_app),
         Err(apps_repo_err) => match apps_repo_err {
             AppsRepoError::DuplicateSlug => Err(AppsServiceError::DuplicateSlug),
+            AppsRepoError::Unknown => Err(AppsServiceError::Unknown),
         },
     }
 }
