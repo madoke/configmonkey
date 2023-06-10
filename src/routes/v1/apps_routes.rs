@@ -15,14 +15,24 @@ use std::io::Cursor;
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
-pub struct CreateAppInput<'r> {
-    slug: &'r str,
-    name: &'r str,
+pub struct CreateAppInput<'a> {
+    slug: &'a str,
+    name: &'a str,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
-pub struct AppDto {
+pub struct PaginationDto<'a> {
+    pub count: i32,
+    pub offset: i32,
+    pub limit: i32,
+    pub next: &'a str,
+    pub prev: &'a str,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct GetAppDto {
     pub id: String,
     pub slug: String,
     pub name: String,
@@ -30,10 +40,18 @@ pub struct AppDto {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct GetAppsDto<'a> {
+    pub data: Vec<GetAppDto>,
+    #[serde(borrow = "'a")]
+    pub pagination: PaginationDto<'a>,
+}
+
 pub struct AppsRoutesError(AppsServiceError);
 
-impl<'r> Responder<'r, 'static> for AppsRoutesError {
-    fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
+impl<'a> Responder<'a, 'static> for AppsRoutesError {
+    fn respond_to(self, _: &'a Request<'_>) -> rocket::response::Result<'static> {
         let AppsRoutesError(apps_service_error) = self;
         let status = match apps_service_error {
             AppsServiceError::DuplicateSlug => Status::Conflict,
@@ -56,17 +74,19 @@ impl<'r> Responder<'r, 'static> for AppsRoutesError {
 
 #[derive(Responder)]
 #[response(status = 200, content_type = "json")]
-pub struct GetAppsResponse(Json<Vec<AppDto>>);
+pub struct GetAppsResponse<'a>(Json<GetAppsDto<'a>>);
 
 #[get("/v1/apps")]
-pub async fn get_apps(db: Connection<ConfigMonkeyDb>) -> Result<GetAppsResponse, AppsRoutesError> {
+pub async fn get_apps(
+    db: Connection<ConfigMonkeyDb>,
+) -> Result<GetAppsResponse<'static>, AppsRoutesError> {
     let result = apps_svc::get_apps(db).await;
     let mut appdtos = vec![];
 
     return match result {
         Ok(apps) => {
             for app in apps {
-                appdtos.push(AppDto {
+                appdtos.push(GetAppDto {
                     name: app.name,
                     slug: app.slug,
                     id: app.id,
@@ -74,7 +94,16 @@ pub async fn get_apps(db: Connection<ConfigMonkeyDb>) -> Result<GetAppsResponse,
                     updated_at: app.updated_at,
                 });
             }
-            Ok(GetAppsResponse(Json(appdtos)))
+            Ok(GetAppsResponse(Json(GetAppsDto {
+                data: appdtos,
+                pagination: PaginationDto {
+                    count: 1,
+                    offset: 1,
+                    limit: 1,
+                    next: "()",
+                    prev: "()",
+                },
+            })))
         }
         Err(err) => Err(AppsRoutesError(err)),
     };
@@ -82,7 +111,7 @@ pub async fn get_apps(db: Connection<ConfigMonkeyDb>) -> Result<GetAppsResponse,
 
 #[derive(Responder)]
 #[response(status = 201, content_type = "json")]
-pub struct CreateAppSuccess(Json<AppDto>);
+pub struct CreateAppSuccess(Json<GetAppDto>);
 
 #[post("/v1/apps", format = "application/json", data = "<input>")]
 pub async fn create_app(
@@ -92,7 +121,7 @@ pub async fn create_app(
     let result = apps_svc::create_app(db, input.slug, input.name).await;
 
     return match result {
-        Ok(app) => Ok(CreateAppSuccess(Json(AppDto {
+        Ok(app) => Ok(CreateAppSuccess(Json(GetAppDto {
             name: app.name,
             slug: app.slug,
             id: app.id,

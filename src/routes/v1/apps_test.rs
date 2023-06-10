@@ -1,4 +1,4 @@
-use crate::routes::v1::apps_routes::AppDto;
+use crate::routes::v1::apps_routes::GetAppDto;
 use crate::routes::v1::common::ErrorMessageDto;
 use crate::test::async_client_from_pg_connect_options;
 use rocket::http::ContentType;
@@ -20,7 +20,7 @@ async fn h_create_app<'a>(client: &'a Client, app_slug: &str, app_name: &str) ->
         .await
 }
 
-async fn h_get_apps<'a>(client: &'a Client) -> Vec<AppDto> {
+async fn h_get_apps<'a>(client: &'a Client) -> Vec<GetAppDto> {
     let response = client
         .get(uri!(crate::routes::v1::apps_routes::get_apps))
         .dispatch()
@@ -31,7 +31,8 @@ async fn h_get_apps<'a>(client: &'a Client) -> Vec<AppDto> {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let response_body = response.into_string().await.expect("Response Body");
-    let apps: Vec<AppDto> = serde_json::from_str(&response_body.as_str()).expect("Valid App List");
+    let apps: Vec<GetAppDto> =
+        serde_json::from_str(&response_body.as_str()).expect("Valid App List");
     apps
 }
 
@@ -53,7 +54,7 @@ async fn create_app_success(
 
     // assert body
     let response_body = response.into_string().await.expect("Response Body");
-    let app_dto: AppDto = serde_json::from_str(&response_body.as_str()).expect("Valid App Dto");
+    let app_dto: GetAppDto = serde_json::from_str(&response_body.as_str()).expect("Valid App Dto");
     assert_eq!(app_dto.slug, "configmonkey");
     assert_eq!(app_dto.name, "Config Monkey");
 
