@@ -110,6 +110,72 @@ async fn err_duplicate_slug(
 }
 
 #[sqlx::test]
+async fn err_invalid_slug(
+    _pg_pool_options: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
+
+    let bad_slugs = vec![
+        "CoNfIgMoNkEy",
+        "!@#$%^&*(){}[]:;,configmonkey",
+        "config monkey",
+    ];
+
+    for bad_slug in bad_slugs.iter() {
+        // create duplicate apps
+        let response = h_create_app(&client, &bad_slug, "Config Monkey").await;
+
+        // assert response
+        assert_eq!(response.status(), Status::BadRequest);
+        assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+        //assert body
+        let response_body = response.into_string().await.expect("Response Body");
+        let error_message: ErrorMessageDto =
+            serde_json::from_str(&response_body.as_str()).expect("Valid Error Message");
+        assert_eq!(error_message.code, "invalid_slug");
+        assert_eq!(
+            error_message.message,
+            "The slug contains invalid characters. Only lowercase letters, numbers and dash (-) are allowed"
+        );
+    }
+
+    Ok(())
+}
+
+#[sqlx::test]
+async fn err_invalid_name(
+    _pg_pool_options: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
+
+    let bad_names = vec!["[ConfigMonkey]", "Config --- Monkey     ", "config monkey "];
+
+    for bad_name in bad_names.iter() {
+        // create duplicate apps
+        let response = h_create_app(&client, "configmonkey", &bad_name).await;
+
+        // assert response
+        assert_eq!(response.status(), Status::BadRequest);
+        assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+        //assert body
+        let response_body = response.into_string().await.expect("Response Body");
+        let error_message: ErrorMessageDto =
+            serde_json::from_str(&response_body.as_str()).expect("Valid Error Message");
+        assert_eq!(error_message.code, "invalid_name");
+        assert_eq!(
+            error_message.message,
+            "The name contains invalid characters. Only letters, numbers, spaces and underscore (_) are allowed"
+        );
+    }
+
+    Ok(())
+}
+
+#[sqlx::test]
 async fn delete_app_success(
     _pg_pool_options: PgPoolOptions,
     pg_connect_options: PgConnectOptions,

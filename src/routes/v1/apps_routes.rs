@@ -30,12 +30,36 @@ pub struct AppDto {
     pub updated_at: DateTime<Utc>,
 }
 
+pub struct AppsRoutesError(AppsServiceError);
+
+impl<'r> Responder<'r, 'static> for AppsRoutesError {
+    fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
+        let AppsRoutesError(apps_service_error) = self;
+        let status = match apps_service_error {
+            AppsServiceError::DuplicateSlug => Status::Conflict,
+            AppsServiceError::InvalidSlug => Status::BadRequest,
+            AppsServiceError::InvalidName => Status::BadRequest,
+            _ => Status::InternalServerError,
+        };
+        let response_body = to_string(&ErrorMessageDto {
+            code: apps_service_error.code(),
+            message: apps_service_error.message(),
+        })
+        .unwrap();
+        Response::build()
+            .header(ContentType::JSON)
+            .status(status)
+            .sized_body(response_body.len(), Cursor::new(response_body))
+            .ok()
+    }
+}
+
 #[derive(Responder)]
 #[response(status = 200, content_type = "json")]
 pub struct GetAppsResponse(Json<Vec<AppDto>>);
 
 #[get("/v1/apps")]
-pub async fn get_apps(db: Connection<ConfigMonkeyDb>) -> GetAppsResponse {
+pub async fn get_apps(db: Connection<ConfigMonkeyDb>) -> Result<GetAppsResponse, AppsRoutesError> {
     let result = apps_svc::get_apps(db).await;
     let mut appdtos = vec![];
 
@@ -50,32 +74,10 @@ pub async fn get_apps(db: Connection<ConfigMonkeyDb>) -> GetAppsResponse {
                     updated_at: app.updated_at,
                 });
             }
-            GetAppsResponse(Json(appdtos))
+            Ok(GetAppsResponse(Json(appdtos)))
         }
-        Err(_e) => panic!("Panix !"),
+        Err(err) => Err(AppsRoutesError(err)),
     };
-}
-
-pub struct AppsRoutesError(AppsServiceError);
-
-impl<'r> Responder<'r, 'static> for AppsRoutesError {
-    fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
-        let AppsRoutesError(apps_service_error) = self;
-        let status = match apps_service_error {
-            AppsServiceError::DuplicateSlug => Status::Conflict,
-            _ => Status::InternalServerError,
-        };
-        let response_body = to_string(&ErrorMessageDto {
-            code: apps_service_error.code(),
-            message: apps_service_error.message(),
-        })
-        .unwrap();
-        Response::build()
-            .header(ContentType::JSON)
-            .status(status)
-            .sized_body(response_body.len(), Cursor::new(response_body))
-            .ok()
-    }
 }
 
 #[derive(Responder)]
