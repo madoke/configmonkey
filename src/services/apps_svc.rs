@@ -1,6 +1,6 @@
 use crate::{
     db::db::ConfigMonkeyDb,
-    models::app::App,
+    models::{app::App, list::List},
     repos::apps_repo::{self, AppsRepoError},
 };
 use lazy_static::lazy_static;
@@ -47,10 +47,40 @@ fn validate_name(slug: &str) -> bool {
     RE.is_match(slug)
 }
 
-pub async fn get_apps(db: Connection<ConfigMonkeyDb>) -> Result<Vec<App>, AppsServiceError> {
-    let result = apps_repo::get_apps(db).await;
+const DEFAULT_LIMIT: i32 = 10;
+const DEFAULT_OFFSET: i32 = 0;
+
+pub async fn get_apps(
+    db: Connection<ConfigMonkeyDb>,
+    limit_opt: Option<i32>,
+    offset_opt: Option<i32>,
+) -> Result<List<App>, AppsServiceError> {
+    let limit = limit_opt.unwrap_or(DEFAULT_LIMIT);
+    let offset = offset_opt.unwrap_or(DEFAULT_OFFSET);
+
+    let result = apps_repo::get_apps(db, limit, offset).await;
     match result {
-        Ok(apps) => Ok(apps),
+        Ok(apps) => {
+            let count = apps.len() as i32;
+            Ok(List {
+                items: apps,
+                count,
+                limit,
+                offset,
+                next_offset: if count == limit {
+                    Some(offset + limit)
+                } else {
+                    None
+                },
+                prev_offset: if offset == 0 {
+                    None
+                } else if offset - limit >= 0 {
+                    Some(offset - limit)
+                } else {
+                    Some(0)
+                },
+            })
+        }
         Err(apps_repo_err) => match apps_repo_err {
             _ => Err(AppsServiceError::Unknown),
         },

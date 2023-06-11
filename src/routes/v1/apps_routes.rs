@@ -22,12 +22,12 @@ pub struct CreateAppInput<'a> {
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
-pub struct PaginationDto<'a> {
+pub struct PaginationDto {
     pub count: i32,
     pub offset: i32,
     pub limit: i32,
-    pub next: &'a str,
-    pub prev: &'a str,
+    pub next: Option<String>,
+    pub prev: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -42,10 +42,9 @@ pub struct GetAppDto {
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
-pub struct GetAppsDto<'a> {
+pub struct GetAppsDto {
     pub data: Vec<GetAppDto>,
-    #[serde(borrow = "'a")]
-    pub pagination: PaginationDto<'a>,
+    pub pagination: PaginationDto,
 }
 
 pub struct AppsRoutesError(AppsServiceError);
@@ -74,18 +73,20 @@ impl<'a> Responder<'a, 'static> for AppsRoutesError {
 
 #[derive(Responder)]
 #[response(status = 200, content_type = "json")]
-pub struct GetAppsResponse<'a>(Json<GetAppsDto<'a>>);
+pub struct GetAppsResponse(Json<GetAppsDto>);
 
-#[get("/v1/apps")]
+#[get("/v1/apps?<limit>&<offset>")]
 pub async fn get_apps(
     db: Connection<ConfigMonkeyDb>,
-) -> Result<GetAppsResponse<'static>, AppsRoutesError> {
-    let result = apps_svc::get_apps(db).await;
+    limit: Option<i32>,
+    offset: Option<i32>,
+) -> Result<GetAppsResponse, AppsRoutesError> {
+    let result = apps_svc::get_apps(db, limit, offset).await;
     let mut appdtos = vec![];
 
     return match result {
-        Ok(apps) => {
-            for app in apps {
+        Ok(list) => {
+            for app in list.items {
                 appdtos.push(GetAppDto {
                     name: app.name,
                     slug: app.slug,
@@ -97,11 +98,25 @@ pub async fn get_apps(
             Ok(GetAppsResponse(Json(GetAppsDto {
                 data: appdtos,
                 pagination: PaginationDto {
-                    count: 1,
-                    offset: 1,
-                    limit: 1,
-                    next: "()",
-                    prev: "()",
+                    count: list.count,
+                    offset: list.offset,
+                    limit: list.limit,
+                    next: if let Some(next_offset) = list.next_offset {
+                        Some(format!(
+                            "/v1/apps?limit={}&offset={}",
+                            list.limit, next_offset
+                        ))
+                    } else {
+                        None
+                    },
+                    prev: if let Some(prev_offset) = list.prev_offset {
+                        Some(format!(
+                            "/v1/apps?limit={}&offset={}",
+                            list.limit, prev_offset
+                        ))
+                    } else {
+                        None
+                    },
                 },
             })))
         }

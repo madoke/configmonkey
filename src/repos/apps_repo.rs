@@ -33,11 +33,18 @@ struct AppEntity {
     pub updated_at: DateTime<Utc>,
 }
 
-pub async fn get_apps(mut db: Connection<ConfigMonkeyDb>) -> Result<Vec<App>, AppsRepoError> {
-    let result =
-        sqlx::query_as::<_, AppEntity>("select id, slug, name, created_at, updated_at from apps")
-            .fetch_all(&mut *db)
-            .await;
+pub async fn get_apps(
+    mut db: Connection<ConfigMonkeyDb>,
+    limit: i32,
+    offset: i32,
+) -> Result<Vec<App>, AppsRepoError> {
+    let result = sqlx::query_as::<_, AppEntity>(
+        "select id, slug, name, created_at, updated_at from apps limit $1 offset $2",
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&mut *db)
+    .await;
 
     match result {
         Ok(entities) => {
