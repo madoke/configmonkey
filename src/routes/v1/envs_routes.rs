@@ -11,7 +11,7 @@ use rocket::serde::{Deserialize, Serialize};
 use rocket::{Request, Response};
 use rocket_db_pools::Connection;
 
-use super::dtos::{ErrorMessageDto, PaginationDto};
+use super::shared_dtos::{ErrorMessageDto, PaginationDto};
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -28,6 +28,13 @@ pub struct GetEnvDto {
 pub struct GetEnvsDto {
     pub data: Vec<GetEnvDto>,
     pub pagination: PaginationDto,
+}
+
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct CreateEnvInput<'a> {
+    slug: &'a str,
+    name: &'a str,
 }
 
 pub struct EnvsRoutesError(EnvsServiceError);
@@ -101,6 +108,30 @@ pub async fn get_envs(
                 },
             })))
         }
+        Err(err) => Err(EnvsRoutesError(err)),
+    };
+}
+
+#[derive(Responder)]
+#[response(status = 201, content_type = "json")]
+pub struct CreateEnvSuccess(Json<GetEnvDto>);
+
+#[post("/v1/envs/<app_slug>", format = "application/json", data = "<input>")]
+pub async fn create_env(
+    db: Connection<ConfigMonkeyDb>,
+    app_slug: &str,
+    input: Json<CreateEnvInput<'_>>,
+) -> Result<CreateEnvSuccess, EnvsRoutesError> {
+    let result = envs_svc::create_env(db, app_slug, input.slug, input.name).await;
+
+    return match result {
+        Ok(app) => Ok(CreateEnvSuccess(Json(GetEnvDto {
+            name: app.name,
+            slug: app.slug,
+            id: app.id,
+            created_at: app.created_at,
+            updated_at: app.updated_at,
+        }))),
         Err(err) => Err(EnvsRoutesError(err)),
     };
 }

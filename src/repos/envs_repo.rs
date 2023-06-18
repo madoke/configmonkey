@@ -1,4 +1,9 @@
-use crate::{db::db::ConfigMonkeyDb, models::env::Env};
+use std::borrow::Cow;
+
+use crate::{
+    db::db::ConfigMonkeyDb,
+    models::{app, env::Env},
+};
 use chrono::{DateTime, Utc};
 use rocket::log::private::debug;
 use rocket_db_pools::{
@@ -9,10 +14,16 @@ use sqlx::Error;
 
 pub enum EnvsRepoError {
     Unknown,
+    DuplicateSlug,
 }
 
 fn map_sqlx_error(error: Error) -> EnvsRepoError {
     match error {
+        Error::Database(err) => match err.code() {
+            // Postgres code for unique_violation: https://www.postgresql.org/docs/current/errcodes-appendix.html
+            Some(Cow::Borrowed("23505")) => EnvsRepoError::DuplicateSlug,
+            _ => EnvsRepoError::Unknown,
+        },
         _ => EnvsRepoError::Unknown,
     }
 }
@@ -61,6 +72,42 @@ pub async fn get_envs(
         }
         Err(error) => {
             error!("Error retrieving envs. Error: {:?}", error);
+            Err(map_sqlx_error(error))
+        }
+    }
+}
+
+pub async fn create_env(
+    mut db: Connection<ConfigMonkeyDb>,
+    app_slug: &str,
+    slug: &str,
+    name: &str,
+) -> Result<Env, EnvsRepoError> {
+    let result = sqlx::query_as::<_, EnvEntity>(
+        "with get_app_id as (select id from apps where slug = $1) \
+        insert into envs(app_id, slug, name) \
+        (select id, $2, $3 from get_app_id) \
+        returning id, slug, name, created_at, updated_at",
+    )
+    .bind(app_slug)
+    .bind(slug)
+    .bind(name)
+    .fetch_one(&mut *db)
+    .await;
+
+    match result {
+        Ok(entity) => {
+            debug!("Successfully created env: {:?}", entity);
+            Ok(Env {
+                name: entity.name,
+                id: entity.id.to_string(),
+                slug: entity.slug,
+                created_at: entity.created_at,
+                updated_at: entity.updated_at,
+            })
+        }
+        Err(error) => {
+            error!("Error creating env with slug: {}. Error: {:?}", slug, error);
             Err(map_sqlx_error(error))
         }
     }

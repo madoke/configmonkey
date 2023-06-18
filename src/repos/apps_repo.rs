@@ -39,7 +39,9 @@ pub async fn get_apps(
     offset: i32,
 ) -> Result<Vec<App>, AppsRepoError> {
     let result = sqlx::query_as::<_, AppEntity>(
-        "select id, slug, name, created_at, updated_at from apps where tenant = 'default' and deleted_at is null limit $1 offset $2",
+        "select id, slug, name, created_at, updated_at from apps \
+        where tenant = 'default' and deleted_at is null \
+        limit $1 offset $2",
     )
     .bind(limit)
     .bind(offset)

@@ -12,7 +12,7 @@ use rocket::{
 use rocket_db_pools::Connection;
 use std::io::Cursor;
 
-use super::dtos::{ErrorMessageDto, PaginationDto};
+use super::shared_dtos::{ErrorMessageDto, PaginationDto};
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
