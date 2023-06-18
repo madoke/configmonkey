@@ -82,7 +82,7 @@ pub async fn get_envs(
                 },
             })
         }
-        Err(apps_repo_err) => match apps_repo_err {
+        Err(envs_repo_err) => match envs_repo_err {
             _ => Err(EnvsServiceError::Unknown),
         },
     }
@@ -107,7 +107,7 @@ pub async fn create_env(
     let result = envs_repo::create_env(db, app_slug, slug, name).await;
     match result {
         Ok(created_env) => Ok(created_env),
-        Err(apps_repo_err) => match apps_repo_err {
+        Err(envs_repo_err) => match envs_repo_err {
             EnvsRepoError::DuplicateSlug => Err(EnvsServiceError::DuplicateSlug),
             EnvsRepoError::Unknown => Err(EnvsServiceError::Unknown),
         },
@@ -122,7 +122,7 @@ pub async fn delete_env(
     let result = envs_repo::delete_env(db, app_slug, slug).await;
     match result {
         Ok(()) => Ok(()),
-        Err(apps_repo_err) => match apps_repo_err {
+        Err(envs_repo_err) => match envs_repo_err {
             _ => Err(EnvsServiceError::Unknown),
         },
     }

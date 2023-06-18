@@ -1,7 +1,6 @@
 use std::io::Cursor;
 
 use crate::db::db::ConfigMonkeyDb;
-use crate::models::env::Env;
 use crate::services::envs_svc::{self, EnvsServiceError};
 use chrono::{DateTime, Utc};
 use rocket::http::{ContentType, Status};

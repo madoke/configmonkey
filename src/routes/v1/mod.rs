@@ -1,5 +1,5 @@
 pub mod apps_routes;
-pub mod configs;
+pub mod configs_routes;
 pub mod envs_routes;
 pub mod shared_dtos;
 

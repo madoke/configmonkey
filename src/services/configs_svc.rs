@@ -1,22 +1,52 @@
-use chrono::Utc;
+use crate::{
+    db::db::ConfigMonkeyDb,
+    models::config::Config,
+    repos::configs_repo::{self, ConfigsRepoError},
+};
+use rocket_db_pools::Connection;
 
-use crate::models::config::Config;
+pub enum ConfigsServiceError {
+    Unknown,
+}
 
-pub fn get_configs() -> Vec<Config> {
-    let mut result: Vec<Config> = Vec::new();
+impl ConfigsServiceError {
+    pub fn code(&self) -> &str {
+        match *self {
+            ConfigsServiceError::Unknown => "unknown",
+        }
+    }
+    pub fn message(&self) -> &str {
+        match *self {
+            ConfigsServiceError::Unknown => "Unknown error",
+        }
+    }
+}
 
-    result.push(Config {
-        id: String::from("123"),
-        slug: String::from("xoxo"),
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
-    });
-    result.push(Config {
-        id: String::from("789"),
-        slug: String::from("xoxo"),
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
-    });
+pub async fn get_config(
+    db: Connection<ConfigMonkeyDb>,
+    app_slug: &str,
+    env_slug: &str,
+) -> Result<Config, ConfigsServiceError> {
+    let result = configs_repo::get_config(db, app_slug, env_slug).await;
+    match result {
+        Ok(config) => Ok(config),
+        Err(configs_repo_err) => match configs_repo_err {
+            _ => Err(ConfigsServiceError::Unknown),
+        },
+    }
+}
 
-    return result;
+pub async fn create_config(
+    db: Connection<ConfigMonkeyDb>,
+    app_slug: &str,
+    env_slug: &str,
+    config: &str,
+) -> Result<Config, ConfigsServiceError> {
+    let result = configs_repo::create_config(db, app_slug, env_slug, config).await;
+    match result {
+        Ok(created_env) => Ok(created_env),
+        Err(configs_repo_err) => match configs_repo_err {
+            ConfigsRepoError::Unknown => Err(ConfigsServiceError::Unknown),
+        },
+    }
 }

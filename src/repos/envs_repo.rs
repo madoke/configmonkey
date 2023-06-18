@@ -1,9 +1,4 @@
-use std::borrow::Cow;
-
-use crate::{
-    db::db::ConfigMonkeyDb,
-    models::{app, env::Env},
-};
+use crate::{db::db::ConfigMonkeyDb, models::env::Env};
 use chrono::{DateTime, Utc};
 use rocket::log::private::debug;
 use rocket_db_pools::{
@@ -11,6 +6,7 @@ use rocket_db_pools::{
     Connection,
 };
 use sqlx::Error;
+use std::borrow::Cow;
 
 pub enum EnvsRepoError {
     Unknown,

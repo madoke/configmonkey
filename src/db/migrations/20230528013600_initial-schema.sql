@@ -24,3 +24,14 @@ CREATE TABLE envs (
     unique(app_id, slug),
     constraint fk_apps foreign key(app_id) references apps(id) on delete cascade
 );
+
+create table configs (
+    id uuid default uuid_generate_v4(),
+    env_id uuid not null,
+    config jsonb not null,    
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    deleted_at timestamptz,
+    unique(env_id),
+    constraint fk_envs foreign key(env_id) references envs(id) on delete cascade
+);
