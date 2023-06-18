@@ -1,4 +1,3 @@
-use super::common::ErrorMessageDto;
 use crate::{
     db::db::ConfigMonkeyDb,
     services::apps_svc::{self, AppsServiceError},
@@ -13,21 +12,13 @@ use rocket::{
 use rocket_db_pools::Connection;
 use std::io::Cursor;
 
+use super::dtos::{ErrorMessageDto, PaginationDto};
+
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct CreateAppInput<'a> {
     slug: &'a str,
     name: &'a str,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(crate = "rocket::serde")]
-pub struct PaginationDto {
-    pub count: i32,
-    pub offset: i32,
-    pub limit: i32,
-    pub next: Option<String>,
-    pub prev: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
