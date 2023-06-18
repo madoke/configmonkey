@@ -106,7 +106,7 @@ pub async fn delete_app(
     mut db: Connection<ConfigMonkeyDb>,
     slug: &str,
 ) -> Result<(), AppsRepoError> {
-    let result = sqlx::query("delete from apps where tenant = $1 and slug = $2")
+    let result = sqlx::query("update apps set deleted_at = now() where tenant = $1 and slug = $2")
         .bind("default")
         .bind(slug)
         .execute(&mut *db)

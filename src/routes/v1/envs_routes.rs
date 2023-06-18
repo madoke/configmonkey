@@ -1,6 +1,7 @@
 use std::io::Cursor;
 
 use crate::db::db::ConfigMonkeyDb;
+use crate::models::env::Env;
 use crate::services::envs_svc::{self, EnvsServiceError};
 use chrono::{DateTime, Utc};
 use rocket::http::{ContentType, Status};
@@ -132,6 +133,24 @@ pub async fn create_env(
             created_at: app.created_at,
             updated_at: app.updated_at,
         }))),
+        Err(err) => Err(EnvsRoutesError(err)),
+    };
+}
+
+#[derive(Responder)]
+#[response(status = 204, content_type = "json")]
+pub struct DeleteEnvSuccess(());
+
+#[delete("/v1/envs/<app_slug>/<env_slug>")]
+pub async fn delete_env(
+    db: Connection<ConfigMonkeyDb>,
+    app_slug: &str,
+    env_slug: &str,
+) -> Result<DeleteEnvSuccess, EnvsRoutesError> {
+    let result = envs_svc::delete_env(db, app_slug, env_slug).await;
+
+    return match result {
+        Ok(()) => Ok(DeleteEnvSuccess(())),
         Err(err) => Err(EnvsRoutesError(err)),
     };
 }

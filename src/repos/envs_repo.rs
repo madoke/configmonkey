@@ -112,3 +112,30 @@ pub async fn create_env(
         }
     }
 }
+
+pub async fn delete_env(
+    mut db: Connection<ConfigMonkeyDb>,
+    app_slug: &str,
+    slug: &str,
+) -> Result<(), EnvsRepoError> {
+    let result = sqlx::query(
+        "update envs e set deleted_at = now() 
+        from apps a \
+        where a.id = e.app_id and a.slug = $1 and e.slug = $2",
+    )
+    .bind(app_slug)
+    .bind(slug)
+    .execute(&mut *db)
+    .await;
+
+    match result {
+        Ok(_result) => {
+            debug!("Successfully deleted env with slug: {}", slug);
+            Ok(())
+        }
+        Err(error) => {
+            error!("Error deleting env with slug: {}. Error: {:?}", slug, error);
+            Err(map_sqlx_error(error))
+        }
+    }
+}

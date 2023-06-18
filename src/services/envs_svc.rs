@@ -113,3 +113,17 @@ pub async fn create_env(
         },
     }
 }
+
+pub async fn delete_env(
+    db: Connection<ConfigMonkeyDb>,
+    app_slug: &str,
+    slug: &str,
+) -> Result<(), EnvsServiceError> {
+    let result = envs_repo::delete_env(db, app_slug, slug).await;
+    match result {
+        Ok(()) => Ok(()),
+        Err(apps_repo_err) => match apps_repo_err {
+            _ => Err(EnvsServiceError::Unknown),
+        },
+    }
+}
