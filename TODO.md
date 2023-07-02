@@ -1,4 +1,4 @@
-Config Routes Draft
+Config Routes Draft {cm:2023-07-02}
 
 Default error handler to always return Json/ErrorMessageDto
 
@@ -15,3 +15,11 @@ Encapsulate shared functionality
 Move all strings to &str
 
 DTO builder functions ?
+
+Refactor all endpoints to use RoutesError
+
+Config Routes Tests
+
+Delete Config
+
+Update Config value

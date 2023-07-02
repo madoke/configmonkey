@@ -1,6 +1,6 @@
 use crate::{
     db::db::ConfigMonkeyDb,
-    services::apps_svc::{self, AppsServiceError},
+    services::apps_service::{self, AppsServiceError},
 };
 use chrono::{DateTime, Utc};
 use rocket::{
@@ -12,7 +12,7 @@ use rocket::{
 use rocket_db_pools::Connection;
 use std::io::Cursor;
 
-use super::shared_dtos::{ErrorMessageDto, PaginationDto};
+use super::dtos::{ErrorMessageDto, PaginationDto};
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -72,7 +72,7 @@ pub async fn get_apps(
     limit: Option<i32>,
     offset: Option<i32>,
 ) -> Result<GetAppsResponse, AppsRoutesError> {
-    let result = apps_svc::get_apps(db, limit, offset).await;
+    let result = apps_service::get_apps(db, limit, offset).await;
     let mut appdtos = vec![];
 
     return match result {
@@ -124,7 +124,7 @@ pub async fn create_app(
     db: Connection<ConfigMonkeyDb>,
     input: Json<CreateAppInput<'_>>,
 ) -> Result<CreateAppSuccess, AppsRoutesError> {
-    let result = apps_svc::create_app(db, input.slug, input.name).await;
+    let result = apps_service::create_app(db, input.slug, input.name).await;
 
     return match result {
         Ok(app) => Ok(CreateAppSuccess(Json(GetAppDto {
@@ -147,7 +147,7 @@ pub async fn delete_app(
     db: Connection<ConfigMonkeyDb>,
     slug: &str,
 ) -> Result<DeleteAppSuccess, AppsRoutesError> {
-    let result = apps_svc::delete_app(db, slug).await;
+    let result = apps_service::delete_app(db, slug).await;
 
     return match result {
         Ok(()) => Ok(DeleteAppSuccess(())),

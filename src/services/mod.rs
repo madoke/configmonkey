@@ -1,3 +1,3 @@
-pub mod apps_svc;
-pub mod configs_svc;
-pub mod envs_svc;
+pub mod apps_service;
+pub mod configs_service;
+pub mod envs_service;

@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::{db::db::ConfigMonkeyDb, models::config::Config};
 use chrono::{DateTime, Utc};
 use rocket::{
@@ -15,10 +17,23 @@ use sqlx::{types::Json, Error};
 
 pub enum ConfigsRepoError {
     Unknown,
+    AppOrEnvNotFound,
+    ConfigAlreadyExists,
+    InvalidConfigJson,
 }
 
 fn map_sqlx_error(error: Error) -> ConfigsRepoError {
     match error {
+        Error::Database(err) => match err.code() {
+            // Postgres code for unique_violation: https://www.postgresql.org/docs/current/errcodes-appendix.html
+            Some(Cow::Borrowed("23505")) => ConfigsRepoError::ConfigAlreadyExists,
+            _ => ConfigsRepoError::Unknown,
+        },
+        Error::RowNotFound => ConfigsRepoError::AppOrEnvNotFound,
+        Error::ColumnDecode {
+            index: _,
+            source: _,
+        } => ConfigsRepoError::InvalidConfigJson,
         _ => ConfigsRepoError::Unknown,
     }
 }
