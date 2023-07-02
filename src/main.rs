@@ -31,6 +31,7 @@ fn rocket_from_config(figment: Figment) -> Rocket<Build> {
                 routes::v1::envs_routes::delete_env,
                 routes::v1::configs_routes::create_config,
                 routes::v1::configs_routes::get_config,
+                routes::v1::configs_routes::delete_config,
             ],
         )
 }

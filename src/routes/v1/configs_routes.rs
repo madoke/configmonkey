@@ -76,3 +76,21 @@ pub async fn create_config(
         Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
     };
 }
+
+#[derive(Responder)]
+#[response(status = 204, content_type = "json")]
+pub struct DeleteConfigSuccess(());
+
+#[delete("/v1/configs/<app_slug>/<env_slug>")]
+pub async fn delete_config(
+    db: Connection<ConfigMonkeyDb>,
+    app_slug: &str,
+    env_slug: &str,
+) -> Result<DeleteConfigSuccess, RoutesError> {
+    let result = configs_service::delete_config(db, app_slug, env_slug).await;
+
+    return match result {
+        Ok(()) => Ok(DeleteConfigSuccess(())),
+        Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
+    };
+}

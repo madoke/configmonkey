@@ -72,3 +72,18 @@ pub async fn create_config(
         },
     }
 }
+
+pub async fn delete_config(
+    db: Connection<ConfigMonkeyDb>,
+    app_slug: &str,
+    env_slug: &str,
+) -> Result<(), ConfigsServiceError> {
+    let result = configs_repo::delete_config(db, app_slug, env_slug).await;
+    match result {
+        Ok(()) => Ok(()),
+        Err(configs_repo_err) => match configs_repo_err {
+            ConfigsRepoError::AppOrEnvNotFound => Err(ConfigsServiceError::AppOrEnvNotFound),
+            _ => Err(ConfigsServiceError::Unknown),
+        },
+    }
+}

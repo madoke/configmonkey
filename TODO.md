@@ -20,6 +20,8 @@ Refactor all endpoints to use RoutesError
 
 Config Routes Tests
 
-Delete Config
+Delete Config {cm:2023-07-02}
 
 Update Config value
+
+App or env not found should be config not found instead

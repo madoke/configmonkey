@@ -113,3 +113,36 @@ pub async fn create_config(
         }
     }
 }
+
+pub async fn delete_config(
+    mut db: Connection<ConfigMonkeyDb>,
+    app_slug: &str,
+    env_slug: &str,
+) -> Result<(), ConfigsRepoError> {
+    let result = sqlx::query(
+        "delete from configs c \
+        using apps a, envs e \
+        where a.id = e.app_id and e.id = c.env_id and a.slug = $1 and e.slug = $2",
+    )
+    .bind(app_slug)
+    .bind(env_slug)
+    .execute(&mut *db)
+    .await;
+
+    match result {
+        Ok(_result) => {
+            debug!(
+                "Successfully deleted config for app {} and env {} ",
+                app_slug, env_slug
+            );
+            Ok(())
+        }
+        Err(error) => {
+            error!(
+                "Error deleting config for app {} and env {}: {:?}",
+                app_slug, env_slug, error
+            );
+            Err(map_sqlx_error(error))
+        }
+    }
+}

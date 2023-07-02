@@ -5,4 +5,4 @@ pub mod envs_routes;
 pub mod errors;
 
 #[cfg(test)]
-pub mod apps_test;
+pub mod apps_routes_test;
