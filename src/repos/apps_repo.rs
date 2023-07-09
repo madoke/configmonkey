@@ -1,6 +1,6 @@
 use crate::{db::db::ConfigMonkeyDb, models::app::App};
 use chrono::{DateTime, Utc};
-use rocket::log::private::debug;
+use rocket::{error, log::private::debug};
 use rocket_db_pools::{
     sqlx::{self, types::Uuid},
     Connection,
@@ -63,9 +63,9 @@ pub async fn get_apps(
             }
             Ok(apps)
         }
-        Err(error) => {
-            error!("Error retrieving apps. Error: {:?}", error);
-            Err(map_sqlx_error(error))
+        Err(err) => {
+            error!("Error retrieving apps. Error: {:?}", err);
+            Err(map_sqlx_error(err))
         }
     }
 }
@@ -95,9 +95,9 @@ pub async fn create_app(
                 updated_at: entity.updated_at,
             })
         }
-        Err(error) => {
-            error!("Error creating app with slug: {}. Error: {:?}", slug, error);
-            Err(map_sqlx_error(error))
+        Err(err) => {
+            error!("Error creating app with slug: {}. Error: {:?}", slug, err);
+            Err(map_sqlx_error(err))
         }
     }
 }
@@ -117,9 +117,9 @@ pub async fn delete_app(
             debug!("Successfully deleted app with slug: {}", slug);
             Ok(())
         }
-        Err(error) => {
-            error!("Error deleting app with slug: {}. Error: {:?}", slug, error);
-            Err(map_sqlx_error(error))
+        Err(err) => {
+            error!("Error deleting app with slug: {}. Error: {:?}", slug, err);
+            Err(map_sqlx_error(err))
         }
     }
 }

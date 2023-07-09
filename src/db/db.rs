@@ -1,4 +1,4 @@
-use rocket::{fairing, Build, Rocket};
+use rocket::{error, fairing, Build, Rocket};
 use rocket_db_pools::sqlx::{self};
 use rocket_db_pools::Database;
 

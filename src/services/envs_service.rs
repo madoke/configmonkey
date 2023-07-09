@@ -15,7 +15,7 @@ pub enum EnvsServiceError {
 }
 
 impl EnvsServiceError {
-    pub fn code(&self) -> &str {
+    pub fn code(&self) -> &'static str {
         match *self {
             EnvsServiceError::DuplicateSlug => "duplicate_slug",
             EnvsServiceError::InvalidSlug => "invalid_slug",
@@ -23,7 +23,7 @@ impl EnvsServiceError {
             EnvsServiceError::Unknown => "unknown",
         }
     }
-    pub fn message(&self) -> &str {
+    pub fn message(&self) -> &'static str {
         match *self {
             EnvsServiceError::DuplicateSlug => "An app with the same slug already exists",
             EnvsServiceError::InvalidSlug => "The slug contains invalid characters. Only lowercase letters, numbers and dash (-) are allowed",

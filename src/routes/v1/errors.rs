@@ -1,9 +1,10 @@
 use std::io::Cursor;
 
 use rocket::{
+    catch,
     http::{ContentType, Status},
     response::Responder,
-    serde::json::to_string,
+    serde::json::{to_string, Json},
     Request, Response,
 };
 
@@ -28,4 +29,20 @@ impl<'a> Responder<'a, 'static> for RoutesError {
             .sized_body(response_body.len(), Cursor::new(response_body))
             .ok()
     }
+}
+
+#[catch(404)]
+pub fn not_found() -> Json<ErrorMessageDto<'static>> {
+    return Json(ErrorMessageDto {
+        code: "resource_not_found",
+        message: "Resource not found",
+    });
+}
+
+#[catch(default)]
+pub fn default_catcher() -> Json<ErrorMessageDto<'static>> {
+    return Json(ErrorMessageDto {
+        code: "unknown_error",
+        message: "Unknown Error",
+    });
 }

@@ -5,6 +5,7 @@ use rocket::http::Status;
 use rocket::response::Responder;
 use rocket::serde::json::Json;
 use rocket::serde::{Deserialize, Serialize};
+use rocket::{delete, get, post};
 use rocket_db_pools::Connection;
 
 use super::errors::RoutesError;

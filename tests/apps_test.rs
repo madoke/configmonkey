@@ -1,44 +1,19 @@
-use crate::routes::v1::apps_routes::GetAppDto;
-use crate::routes::v1::common::ErrorMessageDto;
-use crate::test::async_client_from_pg_connect_options;
+use configmonkey::{
+    self,
+    routes::v1::{
+        apps_routes::{rocket_uri_macro_delete_app, GetAppDto},
+        dtos::ErrorMessageDto,
+    },
+};
 use rocket::http::ContentType;
 use rocket::http::Status;
-use rocket::local::asynchronous::Client;
-use rocket::local::asynchronous::LocalResponse;
 use rocket::serde::json::serde_json;
-use rocket::serde::json::serde_json::json;
+use rocket::uri;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 
-use super::apps_routes::GetAppsDto;
+use crate::common::helpers::{async_client_from_pg_connect_options, h_create_app, h_get_apps};
 
-// helpers
-
-async fn h_create_app<'a>(client: &'a Client, app_slug: &str, app_name: &str) -> LocalResponse<'a> {
-    client
-        .post(uri!(crate::routes::v1::apps_routes::create_app))
-        .header(ContentType::JSON)
-        .body(json!({"slug": app_slug, "name": app_name }).to_string())
-        .dispatch()
-        .await
-}
-
-async fn h_get_apps<'a>(client: &'a Client, limit: Option<i32>, offset: Option<i32>) -> GetAppsDto {
-    let response = client
-        .get(uri!(crate::routes::v1::apps_routes::get_apps(
-            limit, offset
-        )))
-        .dispatch()
-        .await;
-
-    // assert response
-    assert_eq!(response.status(), Status::Ok);
-    assert_eq!(response.content_type(), Some(ContentType::JSON));
-
-    let response_body = response.into_string().await.expect("Response Body");
-    let get_apps_dto: GetAppsDto =
-        serde_json::from_str(&response_body.as_str()).expect("Valid Get Apps Response");
-    get_apps_dto
-}
+mod common;
 
 // test cases
 
@@ -224,9 +199,7 @@ async fn delete_app_success(
 
     // delete app
     let response = client
-        .delete(uri!(crate::routes::v1::apps_routes::delete_app(
-            "configmonkey"
-        )))
+        .delete(uri!(delete_app("configmonkey")))
         .dispatch()
         .await;
 

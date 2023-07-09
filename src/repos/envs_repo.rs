@@ -1,6 +1,6 @@
 use crate::{db::db::ConfigMonkeyDb, models::env::Env};
 use chrono::{DateTime, Utc};
-use rocket::log::private::debug;
+use rocket::{error, log::private::debug};
 use rocket_db_pools::{
     sqlx::{self, types::Uuid},
     Connection,
@@ -66,9 +66,9 @@ pub async fn get_envs(
             }
             Ok(envs)
         }
-        Err(error) => {
-            error!("Error retrieving envs. Error: {:?}", error);
-            Err(map_sqlx_error(error))
+        Err(err) => {
+            error!("Error retrieving envs. Error: {:?}", err);
+            Err(map_sqlx_error(err))
         }
     }
 }
@@ -102,9 +102,9 @@ pub async fn create_env(
                 updated_at: entity.updated_at,
             })
         }
-        Err(error) => {
-            error!("Error creating env with slug: {}. Error: {:?}", slug, error);
-            Err(map_sqlx_error(error))
+        Err(err) => {
+            error!("Error creating env with slug: {}. Error: {:?}", slug, err);
+            Err(map_sqlx_error(err))
         }
     }
 }
@@ -129,9 +129,9 @@ pub async fn delete_env(
             debug!("Successfully deleted env with slug: {}", slug);
             Ok(())
         }
-        Err(error) => {
-            error!("Error deleting env with slug: {}. Error: {:?}", slug, error);
-            Err(map_sqlx_error(error))
+        Err(err) => {
+            error!("Error deleting env with slug: {}. Error: {:?}", slug, err);
+            Err(map_sqlx_error(err))
         }
     }
 }

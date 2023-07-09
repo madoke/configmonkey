@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use crate::{db::db::ConfigMonkeyDb, models::config::Config};
 use chrono::{DateTime, Utc};
 use rocket::{
+    error,
     log::private::debug,
     serde::json::{
         serde_json::{Map, Value},
@@ -72,9 +73,9 @@ pub async fn get_config(
                 updated_at: config.updated_at,
             })
         }
-        Err(error) => {
-            error!("Error retrieving config. Error: {:?}", error);
-            Err(map_sqlx_error(error))
+        Err(err) => {
+            error!("Error retrieving config. Error: {:?}", err);
+            Err(map_sqlx_error(err))
         }
     }
 }
@@ -107,9 +108,9 @@ pub async fn create_config(
                 updated_at: entity.updated_at,
             })
         }
-        Err(error) => {
-            error!("Error creating config. Error: {:?}", error);
-            Err(map_sqlx_error(error))
+        Err(err) => {
+            error!("Error creating config. Error: {:?}", err);
+            Err(map_sqlx_error(err))
         }
     }
 }
@@ -137,12 +138,12 @@ pub async fn delete_config(
             );
             Ok(())
         }
-        Err(error) => {
+        Err(err) => {
             error!(
                 "Error deleting config for app {} and env {}: {:?}",
-                app_slug, env_slug, error
+                app_slug, env_slug, err
             );
-            Err(map_sqlx_error(error))
+            Err(map_sqlx_error(err))
         }
     }
 }
