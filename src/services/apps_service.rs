@@ -15,7 +15,7 @@ pub enum AppsServiceError {
 }
 
 impl AppsServiceError {
-    pub fn code(&self) -> &str {
+    pub fn code(&self) -> &'static str {
         match *self {
             AppsServiceError::DuplicateSlug => "duplicate_slug",
             AppsServiceError::InvalidSlug => "invalid_slug",
@@ -23,7 +23,7 @@ impl AppsServiceError {
             AppsServiceError::Unknown => "unknown",
         }
     }
-    pub fn message(&self) -> &str {
+    pub fn message(&self) -> &'static str {
         match *self {
             AppsServiceError::DuplicateSlug => "An app with the same slug already exists",
             AppsServiceError::InvalidSlug => "The slug contains invalid characters. Only lowercase letters, numbers and dash (-) are allowed",

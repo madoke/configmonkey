@@ -11,6 +11,7 @@ pub enum EnvsServiceError {
     DuplicateSlug,
     InvalidSlug,
     InvalidName,
+    AppOrEnvNotFound,
     Unknown,
 }
 
@@ -20,14 +21,16 @@ impl EnvsServiceError {
             EnvsServiceError::DuplicateSlug => "duplicate_slug",
             EnvsServiceError::InvalidSlug => "invalid_slug",
             EnvsServiceError::InvalidName => "invalid_name",
+            EnvsServiceError::AppOrEnvNotFound => "resource_not_found",
             EnvsServiceError::Unknown => "unknown",
         }
     }
     pub fn message(&self) -> &'static str {
         match *self {
-            EnvsServiceError::DuplicateSlug => "An app with the same slug already exists",
+            EnvsServiceError::DuplicateSlug => "An env with the same slug already exists",
             EnvsServiceError::InvalidSlug => "The slug contains invalid characters. Only lowercase letters, numbers and dash (-) are allowed",
             EnvsServiceError::InvalidName => "The name contains invalid characters. Only letters, numbers, spaces and underscore (_) are allowed",
+            EnvsServiceError::AppOrEnvNotFound => "Resource not found",
             EnvsServiceError::Unknown => "Unknown error",
         }
     }
@@ -109,7 +112,8 @@ pub async fn create_env(
         Ok(created_env) => Ok(created_env),
         Err(envs_repo_err) => match envs_repo_err {
             EnvsRepoError::DuplicateSlug => Err(EnvsServiceError::DuplicateSlug),
-            EnvsRepoError::Unknown => Err(EnvsServiceError::Unknown),
+            EnvsRepoError::AppOrEnvNotFound => Err(EnvsServiceError::AppOrEnvNotFound),
+            _ => Err(EnvsServiceError::Unknown),
         },
     }
 }

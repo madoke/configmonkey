@@ -12,7 +12,7 @@ pub struct PaginationDto {
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
-pub struct ErrorMessageDto<'r> {
-    pub code: &'r str,
-    pub message: &'r str,
+pub struct ErrorMessageDto {
+    pub code: String,
+    pub message: String,
 }

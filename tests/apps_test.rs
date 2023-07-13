@@ -194,7 +194,7 @@ async fn delete_app_success(
 ) -> sqlx::Result<()> {
     let client = async_client_from_pg_connect_options(pg_connect_options).await;
 
-    // create duplicate apps
+    // create app
     h_create_app(&client, "configmonkey", "Config Monkey").await;
 
     // delete app

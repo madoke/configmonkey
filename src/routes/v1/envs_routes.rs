@@ -37,6 +37,10 @@ pub struct CreateEnvInput<'a> {
 
 fn to_http_status(error: &EnvsServiceError) -> Status {
     match error {
+        EnvsServiceError::DuplicateSlug => Status::Conflict,
+        EnvsServiceError::InvalidName => Status::BadRequest,
+        EnvsServiceError::InvalidSlug => Status::BadRequest,
+        EnvsServiceError::AppOrEnvNotFound => Status::NotFound,
         _ => Status::InternalServerError,
     }
 }

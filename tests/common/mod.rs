@@ -2,10 +2,17 @@
 pub mod helpers {
     use configmonkey::{
         app::rocket_from_config,
-        routes::v1::apps_routes::{
-            rocket_uri_macro_create_app, rocket_uri_macro_get_apps, GetAppsDto,
+        routes::v1::{
+            apps_routes::{
+                rocket_uri_macro_create_app, rocket_uri_macro_delete_app,
+                rocket_uri_macro_get_apps, GetAppsDto,
+            },
+            dtos::ErrorMessageDto,
+            envs_routes::{
+                rocket_uri_macro_create_env, rocket_uri_macro_delete_env,
+                rocket_uri_macro_get_envs, GetEnvDto, GetEnvsDto,
+            },
         },
-        routes::v1::envs_routes::rocket_uri_macro_create_env,
     };
     use rocket::{
         figment::{
@@ -74,6 +81,11 @@ pub mod helpers {
         get_apps_dto
     }
 
+    // Request to delete app
+    pub async fn h_delete_app<'a>(client: &'a Client, app_slug: &str) -> LocalResponse<'a> {
+        client.get(uri!(delete_app(app_slug))).dispatch().await
+    }
+
     // Envs
 
     /// Request to create a new env
@@ -89,5 +101,52 @@ pub mod helpers {
             .body(json!({"slug": env_slug, "name": env_name }).to_string())
             .dispatch()
             .await
+    }
+
+    // Request to get all available envs
+    pub async fn h_get_envs<'a>(
+        client: &'a Client,
+        app_slug: &str,
+        limit: Option<i32>,
+        offset: Option<i32>,
+    ) -> LocalResponse<'a> {
+        client
+            .get(uri!(get_envs(app_slug, limit, offset)))
+            .dispatch()
+            .await
+    }
+
+    // Request to delete environment
+    pub async fn h_delete_env<'a>(
+        client: &'a Client,
+        app_slug: &str,
+        env_slug: &str,
+    ) -> LocalResponse<'a> {
+        client
+            .delete(uri!(delete_env(app_slug, env_slug)))
+            .dispatch()
+            .await
+    }
+
+    /// Parse get envs
+    pub async fn h_parse_get_envs<'a>(response: LocalResponse<'a>) -> GetEnvsDto {
+        let response_body = response.into_string().await.expect("Valid Response Body");
+        let get_envs_dto: GetEnvsDto =
+            from_str(&response_body.as_str()).expect("Valid Get Envs Dto");
+        get_envs_dto
+    }
+
+    /// Parse single env
+    pub async fn h_parse_get_env<'a>(response: LocalResponse<'a>) -> GetEnvDto {
+        let response_body = response.into_string().await.expect("Valid Response Body");
+        from_str(&response_body.as_str()).expect("Valid Env Dto")
+    }
+
+    // Errors
+
+    /// Parse error
+    pub async fn h_parse_error<'a>(response: LocalResponse<'a>) -> ErrorMessageDto {
+        let response_body = response.into_string().await.expect("Valid Response Body");
+        from_str(&response_body.as_str()).expect("Valid Error Message")
     }
 }

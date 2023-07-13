@@ -5,16 +5,14 @@ use crate::{
 use chrono::{DateTime, Utc};
 use rocket::{
     delete, get,
-    http::{ContentType, Status},
+    http::Status,
     post,
     response::Responder,
-    serde::{json::to_string, json::Json, Deserialize, Serialize},
-    Request, Response,
+    serde::{json::Json, Deserialize, Serialize},
 };
 use rocket_db_pools::Connection;
-use std::io::Cursor;
 
-use super::dtos::{ErrorMessageDto, PaginationDto};
+use super::{dtos::PaginationDto, errors::RoutesError};
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -40,27 +38,12 @@ pub struct GetAppsDto {
     pub pagination: PaginationDto,
 }
 
-pub struct AppsRoutesError(AppsServiceError);
-
-impl<'a> Responder<'a, 'static> for AppsRoutesError {
-    fn respond_to(self, _: &'a Request<'_>) -> rocket::response::Result<'static> {
-        let AppsRoutesError(apps_service_error) = self;
-        let status = match apps_service_error {
-            AppsServiceError::DuplicateSlug => Status::Conflict,
-            AppsServiceError::InvalidSlug => Status::BadRequest,
-            AppsServiceError::InvalidName => Status::BadRequest,
-            _ => Status::InternalServerError,
-        };
-        let response_body = to_string(&ErrorMessageDto {
-            code: apps_service_error.code(),
-            message: apps_service_error.message(),
-        })
-        .unwrap();
-        Response::build()
-            .header(ContentType::JSON)
-            .status(status)
-            .sized_body(response_body.len(), Cursor::new(response_body))
-            .ok()
+fn to_http_status(error: &AppsServiceError) -> Status {
+    match error {
+        AppsServiceError::DuplicateSlug => Status::Conflict,
+        AppsServiceError::InvalidName => Status::BadRequest,
+        AppsServiceError::InvalidSlug => Status::BadRequest,
+        _ => Status::InternalServerError,
     }
 }
 
@@ -73,7 +56,7 @@ pub async fn get_apps(
     db: Connection<ConfigMonkeyDb>,
     limit: Option<i32>,
     offset: Option<i32>,
-) -> Result<GetAppsResponse, AppsRoutesError> {
+) -> Result<GetAppsResponse, RoutesError> {
     let result = apps_service::get_apps(db, limit, offset).await;
     let mut appdtos = vec![];
 
@@ -113,7 +96,7 @@ pub async fn get_apps(
                 },
             })))
         }
-        Err(err) => Err(AppsRoutesError(err)),
+        Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
     };
 }
 
@@ -125,7 +108,7 @@ pub struct CreateAppSuccess(Json<GetAppDto>);
 pub async fn create_app(
     db: Connection<ConfigMonkeyDb>,
     input: Json<CreateAppInput<'_>>,
-) -> Result<CreateAppSuccess, AppsRoutesError> {
+) -> Result<CreateAppSuccess, RoutesError> {
     let result = apps_service::create_app(db, input.slug, input.name).await;
 
     return match result {
@@ -136,7 +119,7 @@ pub async fn create_app(
             created_at: app.created_at,
             updated_at: app.updated_at,
         }))),
-        Err(err) => Err(AppsRoutesError(err)),
+        Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
     };
 }
 
@@ -148,11 +131,11 @@ pub struct DeleteAppSuccess(());
 pub async fn delete_app(
     db: Connection<ConfigMonkeyDb>,
     slug: &str,
-) -> Result<DeleteAppSuccess, AppsRoutesError> {
+) -> Result<DeleteAppSuccess, RoutesError> {
     let result = apps_service::delete_app(db, slug).await;
 
     return match result {
         Ok(()) => Ok(DeleteAppSuccess(())),
-        Err(err) => Err(AppsRoutesError(err)),
+        Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
     };
 }

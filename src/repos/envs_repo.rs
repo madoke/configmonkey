@@ -11,6 +11,7 @@ use std::borrow::Cow;
 pub enum EnvsRepoError {
     Unknown,
     DuplicateSlug,
+    AppOrEnvNotFound,
 }
 
 fn map_sqlx_error(error: Error) -> EnvsRepoError {
@@ -20,6 +21,7 @@ fn map_sqlx_error(error: Error) -> EnvsRepoError {
             Some(Cow::Borrowed("23505")) => EnvsRepoError::DuplicateSlug,
             _ => EnvsRepoError::Unknown,
         },
+        Error::RowNotFound => EnvsRepoError::AppOrEnvNotFound,
         _ => EnvsRepoError::Unknown,
     }
 }
