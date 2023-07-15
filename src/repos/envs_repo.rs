@@ -127,12 +127,19 @@ pub async fn delete_env(
     .await;
 
     match result {
-        Ok(_result) => {
+        Ok(result) => {
+            if result.rows_affected() == 0 {
+                error!("Env {} or app {} not found", slug, app_slug);
+                return Err(EnvsRepoError::AppOrEnvNotFound);
+            }
             debug!("Successfully deleted env with slug: {}", slug);
             Ok(())
         }
         Err(err) => {
-            error!("Error deleting env with slug: {}. Error: {:?}", slug, err);
+            error!(
+                "Error deleting env {} on app {}. Error: {:?}",
+                slug, app_slug, err
+            );
             Err(map_sqlx_error(err))
         }
     }

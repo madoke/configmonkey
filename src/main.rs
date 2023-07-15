@@ -9,6 +9,7 @@ mod models;
 mod repos;
 mod routes;
 mod services;
+mod shared;
 
 #[launch]
 fn rocket() -> Rocket<Build> {

@@ -11,9 +11,9 @@ use rocket::serde::json::serde_json;
 use rocket::uri;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 
-use crate::common::helpers::{async_client_from_pg_connect_options, h_create_app, h_get_apps};
-
 mod common;
+
+pub use common::helpers::*;
 
 // test cases
 
@@ -122,7 +122,7 @@ async fn err_duplicate_slug(
 }
 
 #[sqlx::test]
-async fn err_invalid_slug(
+async fn create_app_err_invalid_slug(
     _pg_pool_options: PgPoolOptions,
     pg_connect_options: PgConnectOptions,
 ) -> sqlx::Result<()> {
@@ -135,7 +135,7 @@ async fn err_invalid_slug(
     ];
 
     for bad_slug in bad_slugs.iter() {
-        // create duplicate apps
+        // create app with bad slug
         let response = h_create_app(&client, &bad_slug, "Config Monkey").await;
 
         // assert response
@@ -143,21 +143,16 @@ async fn err_invalid_slug(
         assert_eq!(response.content_type(), Some(ContentType::JSON));
 
         //assert body
-        let response_body = response.into_string().await.expect("Response Body");
-        let error_message: ErrorMessageDto =
-            serde_json::from_str(&response_body.as_str()).expect("Valid Error Message");
-        assert_eq!(error_message.code, "invalid_slug");
-        assert_eq!(
-            error_message.message,
-            "The slug contains invalid characters. Only lowercase letters, numbers and dash (-) are allowed"
-        );
+        let error_message_dto = h_parse_error(response).await;
+        assert_eq!(error_message_dto.code, "invalid_slug");
+        assert_eq!(error_message_dto.message, "The slug contains invalid characters. Only lowercase letters, numbers and dash (-) are allowed");
     }
 
     Ok(())
 }
 
 #[sqlx::test]
-async fn err_invalid_name(
+async fn create_app_err_invalid_name(
     _pg_pool_options: PgPoolOptions,
     pg_connect_options: PgConnectOptions,
 ) -> sqlx::Result<()> {
@@ -166,7 +161,7 @@ async fn err_invalid_name(
     let bad_names = vec!["[ConfigMonkey]", "Config --- Monkey     ", "config monkey "];
 
     for bad_name in bad_names.iter() {
-        // create duplicate apps
+        // create app with bad name
         let response = h_create_app(&client, "configmonkey", &bad_name).await;
 
         // assert response
@@ -174,14 +169,9 @@ async fn err_invalid_name(
         assert_eq!(response.content_type(), Some(ContentType::JSON));
 
         //assert body
-        let response_body = response.into_string().await.expect("Response Body");
-        let error_message: ErrorMessageDto =
-            serde_json::from_str(&response_body.as_str()).expect("Valid Error Message");
-        assert_eq!(error_message.code, "invalid_name");
-        assert_eq!(
-            error_message.message,
-            "The name contains invalid characters. Only letters, numbers, spaces and underscore (_) are allowed"
-        );
+        let error_message_dto = h_parse_error(response).await;
+        assert_eq!(error_message_dto.code, "invalid_name");
+        assert_eq!(error_message_dto.message, "The name contains invalid characters. Only letters, numbers, spaces and underscore (_) are allowed");
     }
 
     Ok(())

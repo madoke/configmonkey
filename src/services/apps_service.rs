@@ -2,9 +2,8 @@ use crate::{
     db::db::ConfigMonkeyDb,
     models::{app::App, list::List},
     repos::apps_repo::{self, AppsRepoError},
+    shared::validators::{validate_name, validate_slug},
 };
-use lazy_static::lazy_static;
-use regex::Regex;
 use rocket_db_pools::Connection;
 
 pub enum AppsServiceError {
@@ -31,20 +30,6 @@ impl AppsServiceError {
             AppsServiceError::Unknown => "Unknown error",
         }
     }
-}
-
-fn validate_slug(slug: &str) -> bool {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^[a-z0-9\-]+$").unwrap();
-    }
-    RE.is_match(slug)
-}
-
-fn validate_name(slug: &str) -> bool {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^\w+(\s+\w+)*$").unwrap();
-    }
-    RE.is_match(slug)
 }
 
 const DEFAULT_LIMIT: i32 = 10;

@@ -7,6 +7,7 @@ pub mod helpers {
                 rocket_uri_macro_create_app, rocket_uri_macro_delete_app,
                 rocket_uri_macro_get_apps, GetAppsDto,
             },
+            configs_routes::rocket_uri_macro_create_config,
             dtos::ErrorMessageDto,
             envs_routes::{
                 rocket_uri_macro_create_env, rocket_uri_macro_delete_env,
@@ -21,7 +22,7 @@ pub mod helpers {
         },
         http::{ContentType, Status},
         local::asynchronous::{Client, LocalResponse},
-        serde::json::serde_json::{from_str, json},
+        serde::json::serde_json::{self, from_str, json},
         uri,
     };
     use sqlx::postgres::PgConnectOptions;
@@ -140,6 +141,23 @@ pub mod helpers {
     pub async fn h_parse_get_env<'a>(response: LocalResponse<'a>) -> GetEnvDto {
         let response_body = response.into_string().await.expect("Valid Response Body");
         from_str(&response_body.as_str()).expect("Valid Env Dto")
+    }
+
+    // Configs
+
+    /// Request to create a new config
+    pub async fn h_create_config<'a>(
+        client: &'a Client,
+        app_slug: &str,
+        env_slug: &str,
+        config: serde_json::Value,
+    ) -> LocalResponse<'a> {
+        client
+            .post(uri!(create_config(app_slug, env_slug)))
+            .header(ContentType::JSON)
+            .body(config.to_string())
+            .dispatch()
+            .await
     }
 
     // Errors
