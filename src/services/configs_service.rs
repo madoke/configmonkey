@@ -5,7 +5,7 @@ use crate::{
 };
 use rocket::serde::{
     de::IgnoredAny,
-    json::serde_json::{from_str, Error},
+    json::serde_json::{self, from_str, Error},
 };
 use rocket_db_pools::Connection;
 
@@ -19,18 +19,18 @@ pub enum ConfigsServiceError {
 impl ConfigsServiceError {
     pub fn code(&self) -> &'static str {
         match *self {
-            ConfigsServiceError::Unknown => "unknown",
-            ConfigsServiceError::AppOrEnvNotFound => "app_or_env_not_found",
             ConfigsServiceError::ConfigAlreadyExists => "config_already_exists",
             ConfigsServiceError::InvalidConfigFormat => "invalid_config_format",
+            ConfigsServiceError::AppOrEnvNotFound => "resource_not_fount",
+            ConfigsServiceError::Unknown => "unknown_error",
         }
     }
     pub fn message(&self) -> &'static str {
         match *self {
-            ConfigsServiceError::Unknown => "Unknown error",
-            ConfigsServiceError::AppOrEnvNotFound => "App or env not found",
             ConfigsServiceError::ConfigAlreadyExists => "Config already exists",
             ConfigsServiceError::InvalidConfigFormat => "Invalid config format. Check the payload",
+            ConfigsServiceError::AppOrEnvNotFound => "Resource not found",
+            ConfigsServiceError::Unknown => "Unknown error",
         }
     }
 }
@@ -56,12 +56,12 @@ pub async fn create_config(
     env_slug: &str,
     config: &str,
 ) -> Result<Config, ConfigsServiceError> {
-    let parsed_value: Result<IgnoredAny, Error> = from_str(config);
+    let parsed_value: Result<serde_json::Value, Error> = from_str(config);
     if parsed_value.is_err() {
         return Err(ConfigsServiceError::InvalidConfigFormat);
     }
 
-    let result = configs_repo::create_config(db, app_slug, env_slug, config).await;
+    let result = configs_repo::create_config(db, app_slug, env_slug, parsed_value.unwrap()).await;
     match result {
         Ok(created_env) => Ok(created_env),
         Err(configs_repo_err) => match configs_repo_err {

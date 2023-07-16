@@ -6,7 +6,7 @@ use rocket::{
     error,
     log::private::debug,
     serde::json::{
-        serde_json::{Map, Value},
+        serde_json::{self, Map, Value},
         to_string,
     },
 };
@@ -84,8 +84,9 @@ pub async fn create_config(
     mut db: Connection<ConfigMonkeyDb>,
     app_slug: &str,
     env_slug: &str,
-    config: &str,
+    config: serde_json::Value,
 ) -> Result<Config, ConfigsRepoError> {
+    print!("{}", config);
     let result = sqlx::query_as::<_, ConfigEntity>(
         "with get_env_id as (select e.id from envs e join apps a on a.id = e.app_id where a.slug = $1 and e.slug = $2) \
         insert into configs(env_id, config) \
@@ -94,7 +95,7 @@ pub async fn create_config(
     )
     .bind(app_slug)
     .bind(env_slug)
-    .bind(Json(config))
+    .bind(config)
     .fetch_one(&mut *db)
     .await;
 

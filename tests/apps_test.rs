@@ -94,7 +94,7 @@ async fn get_apps_success(
 }
 
 #[sqlx::test]
-async fn err_duplicate_slug(
+async fn create_app_err_duplicate_slug(
     _pg_pool_options: PgPoolOptions,
     pg_connect_options: PgConnectOptions,
 ) -> sqlx::Result<()> {

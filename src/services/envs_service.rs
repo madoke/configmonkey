@@ -11,6 +11,7 @@ pub enum EnvsServiceError {
     InvalidSlug,
     InvalidName,
     AppOrEnvNotFound,
+    EnvHasConfigs,
     Unknown,
 }
 
@@ -20,6 +21,7 @@ impl EnvsServiceError {
             EnvsServiceError::DuplicateSlug => "duplicate_slug",
             EnvsServiceError::InvalidSlug => "invalid_slug",
             EnvsServiceError::InvalidName => "invalid_name",
+            EnvsServiceError::EnvHasConfigs => "env_has_configs",
             EnvsServiceError::AppOrEnvNotFound => "resource_not_found",
             EnvsServiceError::Unknown => "unknown",
         }
@@ -29,6 +31,7 @@ impl EnvsServiceError {
             EnvsServiceError::DuplicateSlug => "An env with the same slug already exists",
             EnvsServiceError::InvalidSlug => "The slug contains invalid characters. Only lowercase letters, numbers and dash (-) are allowed",
             EnvsServiceError::InvalidName => "The name contains invalid characters. Only letters, numbers, spaces and underscore (_) are allowed",
+            EnvsServiceError::EnvHasConfigs => "The environment could not be deleted because there are existing configs",
             EnvsServiceError::AppOrEnvNotFound => "Resource not found",
             EnvsServiceError::Unknown => "Unknown error",
         }
@@ -113,6 +116,7 @@ pub async fn delete_env(
         Ok(()) => Ok(()),
         Err(envs_repo_err) => match envs_repo_err {
             EnvsRepoError::AppOrEnvNotFound => Err(EnvsServiceError::AppOrEnvNotFound),
+            EnvsRepoError::EntityHasChildren => Err(EnvsServiceError::EnvHasConfigs),
             _ => Err(EnvsServiceError::Unknown),
         },
     }

@@ -12,6 +12,7 @@ pub enum EnvsRepoError {
     Unknown,
     DuplicateSlug,
     AppOrEnvNotFound,
+    EntityHasChildren,
 }
 
 fn map_sqlx_error(error: Error) -> EnvsRepoError {
@@ -19,6 +20,7 @@ fn map_sqlx_error(error: Error) -> EnvsRepoError {
         Error::Database(err) => match err.code() {
             // Postgres code for unique_violation: https://www.postgresql.org/docs/current/errcodes-appendix.html
             Some(Cow::Borrowed("23505")) => EnvsRepoError::DuplicateSlug,
+            Some(Cow::Borrowed("23503")) => EnvsRepoError::EntityHasChildren,
             _ => EnvsRepoError::Unknown,
         },
         Error::RowNotFound => EnvsRepoError::AppOrEnvNotFound,
@@ -44,7 +46,7 @@ pub async fn get_envs(
     let result = sqlx::query_as::<_, EnvEntity>(
         "select e.id, e.slug, e.name, e.created_at, e.updated_at from envs e \
         join apps a on a.tenant = 'default' and a.id = e.app_id \
-        where a.slug = $1 and a.deleted_at is null and e.deleted_at is null \
+        where a.slug = $1 \
         limit $2 offset $3",
     )
     .bind(app_slug)
@@ -117,8 +119,8 @@ pub async fn delete_env(
     slug: &str,
 ) -> Result<(), EnvsRepoError> {
     let result = sqlx::query(
-        "update envs e set deleted_at = now() 
-        from apps a \
+        "delete from envs e  
+        using apps a \
         where a.id = e.app_id and a.slug = $1 and e.slug = $2",
     )
     .bind(app_slug)

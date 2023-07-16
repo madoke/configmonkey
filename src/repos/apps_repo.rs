@@ -10,6 +10,8 @@ use std::borrow::Cow;
 
 pub enum AppsRepoError {
     DuplicateSlug,
+    AppNotFound,
+    AppHasEnvs,
     Unknown,
 }
 
@@ -18,8 +20,10 @@ fn map_sqlx_error(error: Error) -> AppsRepoError {
         Error::Database(err) => match err.code() {
             // Postgres code for unique_violation: https://www.postgresql.org/docs/current/errcodes-appendix.html
             Some(Cow::Borrowed("23505")) => AppsRepoError::DuplicateSlug,
+            Some(Cow::Borrowed("23503")) => AppsRepoError::AppHasEnvs,
             _ => AppsRepoError::Unknown,
         },
+        Error::RowNotFound => AppsRepoError::AppNotFound,
         _ => AppsRepoError::Unknown,
     }
 }
@@ -40,7 +44,7 @@ pub async fn get_apps(
 ) -> Result<Vec<App>, AppsRepoError> {
     let result = sqlx::query_as::<_, AppEntity>(
         "select id, slug, name, created_at, updated_at from apps \
-        where tenant = 'default' and deleted_at is null \
+        where tenant = 'default' \
         limit $1 offset $2",
     )
     .bind(limit)
@@ -106,7 +110,7 @@ pub async fn delete_app(
     mut db: Connection<ConfigMonkeyDb>,
     slug: &str,
 ) -> Result<(), AppsRepoError> {
-    let result = sqlx::query("update apps set deleted_at = now() where tenant = $1 and slug = $2")
+    let result = sqlx::query("delete from apps where tenant = $1 and slug = $2")
         .bind("default")
         .bind(slug)
         .execute(&mut *db)

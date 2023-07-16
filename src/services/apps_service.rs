@@ -19,7 +19,7 @@ impl AppsServiceError {
             AppsServiceError::DuplicateSlug => "duplicate_slug",
             AppsServiceError::InvalidSlug => "invalid_slug",
             AppsServiceError::InvalidName => "invalid_name",
-            AppsServiceError::Unknown => "unknown",
+            AppsServiceError::Unknown => "unknown_error",
         }
     }
     pub fn message(&self) -> &'static str {
@@ -92,7 +92,7 @@ pub async fn create_app(
         Ok(created_app) => Ok(created_app),
         Err(apps_repo_err) => match apps_repo_err {
             AppsRepoError::DuplicateSlug => Err(AppsServiceError::DuplicateSlug),
-            AppsRepoError::Unknown => Err(AppsServiceError::Unknown),
+            _ => Err(AppsServiceError::Unknown),
         },
     }
 }

@@ -41,6 +41,7 @@ fn to_http_status(error: &EnvsServiceError) -> Status {
         EnvsServiceError::InvalidName => Status::BadRequest,
         EnvsServiceError::InvalidSlug => Status::BadRequest,
         EnvsServiceError::AppOrEnvNotFound => Status::NotFound,
+        EnvsServiceError::EnvHasConfigs => Status::UnprocessableEntity,
         _ => Status::InternalServerError,
     }
 }

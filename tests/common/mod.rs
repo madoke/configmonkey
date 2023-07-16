@@ -22,7 +22,7 @@ pub mod helpers {
         },
         http::{ContentType, Status},
         local::asynchronous::{Client, LocalResponse},
-        serde::json::serde_json::{self, from_str, json},
+        serde::json::serde_json::{from_str, json},
         uri,
     };
     use sqlx::postgres::PgConnectOptions;
@@ -150,12 +150,12 @@ pub mod helpers {
         client: &'a Client,
         app_slug: &str,
         env_slug: &str,
-        config: serde_json::Value,
+        config: &str,
     ) -> LocalResponse<'a> {
         client
             .post(uri!(create_config(app_slug, env_slug)))
             .header(ContentType::JSON)
-            .body(config.to_string())
+            .body(config)
             .dispatch()
             .await
     }

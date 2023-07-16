@@ -7,7 +7,6 @@ CREATE TABLE apps (
     name varchar not null,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
-    deleted_at timestamptz,
     primary key(id),
     unique(tenant, slug)
 );
@@ -19,10 +18,9 @@ CREATE TABLE envs (
     name varchar not null,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
-    deleted_at timestamptz,
     primary key(id),
     unique(app_id, slug),
-    constraint fk_apps foreign key(app_id) references apps(id) on delete cascade
+    constraint fk_apps foreign key(app_id) references apps(id)
 );
 
 create table configs (
@@ -31,7 +29,6 @@ create table configs (
     config jsonb not null,    
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
-    deleted_at timestamptz,
     unique(env_id),
-    constraint fk_envs foreign key(env_id) references envs(id) on delete cascade
+    constraint fk_envs foreign key(env_id) references envs(id)
 );
