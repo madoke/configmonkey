@@ -74,6 +74,7 @@ pub async fn get_envs(
             })
         }
         Err(envs_repo_err) => match envs_repo_err {
+            EnvsRepoError::AppOrEnvNotFound => Err(EnvsServiceError::AppOrEnvNotFound),
             _ => Err(EnvsServiceError::Unknown),
         },
     }

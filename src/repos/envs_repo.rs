@@ -5,7 +5,7 @@ use rocket_db_pools::{
     sqlx::{self, types::Uuid},
     Connection,
 };
-use sqlx::Error;
+use sqlx::{Error, Row};
 use std::borrow::Cow;
 
 pub enum EnvsRepoError {
@@ -43,35 +43,48 @@ pub async fn get_envs(
     limit: i32,
     offset: i32,
 ) -> Result<Vec<Env>, EnvsRepoError> {
-    let result = sqlx::query_as::<_, EnvEntity>(
-        "select e.id, e.slug, e.name, e.created_at, e.updated_at from envs e \
-        join apps a on a.tenant = 'default' and a.id = e.app_id \
-        where a.slug = $1 \
-        limit $2 offset $3",
-    )
-    .bind(app_slug)
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&mut *db)
-    .await;
+    let app_result = sqlx::query("select id from apps where slug = $1")
+        .bind(app_slug)
+        .fetch_one(&mut *db)
+        .await;
 
-    match result {
-        Ok(entities) => {
-            debug!("Successfully retrieved envs: {:?}", entities);
-            let mut envs = vec![];
-            for entity in entities {
-                envs.push(Env {
-                    name: entity.name,
-                    id: entity.id.to_string(),
-                    slug: entity.slug,
-                    created_at: entity.created_at,
-                    updated_at: entity.updated_at,
-                })
+    match app_result {
+        Ok(row) => {
+            let app_id: sqlx::types::Uuid = row.get("id");
+            let env_result = sqlx::query_as::<_, EnvEntity>(
+                "select e.id, e.slug, e.name, e.created_at, e.updated_at from envs e \
+        where e.app_id = $1 \
+        limit $2 offset $3",
+            )
+            .bind(app_id)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&mut *db)
+            .await;
+
+            match env_result {
+                Ok(entities) => {
+                    debug!("Successfully retrieved envs: {:?}", entities);
+                    let mut envs = vec![];
+                    for entity in entities {
+                        envs.push(Env {
+                            name: entity.name,
+                            id: entity.id.to_string(),
+                            slug: entity.slug,
+                            created_at: entity.created_at,
+                            updated_at: entity.updated_at,
+                        })
+                    }
+                    Ok(envs)
+                }
+                Err(err) => {
+                    error!("Error retrieving envs. Error: {:?}", err);
+                    Err(map_sqlx_error(err))
+                }
             }
-            Ok(envs)
         }
         Err(err) => {
-            error!("Error retrieving envs. Error: {:?}", err);
+            error!("Error retrieving app id. Error: {:?}", err);
             Err(map_sqlx_error(err))
         }
     }
