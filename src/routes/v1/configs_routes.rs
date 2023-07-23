@@ -3,8 +3,10 @@ use crate::services::configs_service::{self, ConfigsServiceError};
 use chrono::{DateTime, Utc};
 use rocket::http::Status;
 use rocket::response::Responder;
-use rocket::serde::json::Json;
-use rocket::serde::{Deserialize, Serialize};
+use rocket::serde::{
+    json::{from_str, Json, Value},
+    Deserialize, Serialize,
+};
 use rocket::{delete, get, post};
 use rocket_db_pools::Connection;
 
@@ -14,7 +16,7 @@ use super::errors::RoutesError;
 #[serde(crate = "rocket::serde")]
 pub struct GetConfigDto {
     pub id: String,
-    pub config: String,
+    pub config: Value,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -42,7 +44,7 @@ pub async fn get_config(
     return match result {
         Ok(config) => Ok(GetConfigResponse(Json(GetConfigDto {
             id: config.id,
-            config: config.config,
+            config: from_str(config.config.as_str()).unwrap(),
             created_at: config.created_at,
             updated_at: config.updated_at,
         }))),
@@ -70,7 +72,7 @@ pub async fn create_config(
     return match result {
         Ok(config) => Ok(CreateConfigSuccess(Json(GetConfigDto {
             id: config.id,
-            config: config.config,
+            config: from_str(config.config.as_str()).unwrap(),
             created_at: config.created_at,
             updated_at: config.updated_at,
         }))),

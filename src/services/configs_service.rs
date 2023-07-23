@@ -3,10 +3,7 @@ use crate::{
     models::config::Config,
     repos::configs_repo::{self, ConfigsRepoError},
 };
-use rocket::serde::{
-    de::IgnoredAny,
-    json::serde_json::{self, from_str, Error},
-};
+use rocket::serde::json::serde_json::{self, from_str, Error};
 use rocket_db_pools::Connection;
 
 pub enum ConfigsServiceError {
@@ -21,7 +18,7 @@ impl ConfigsServiceError {
         match *self {
             ConfigsServiceError::ConfigAlreadyExists => "config_already_exists",
             ConfigsServiceError::InvalidConfigFormat => "invalid_config_format",
-            ConfigsServiceError::AppOrEnvNotFound => "resource_not_fount",
+            ConfigsServiceError::AppOrEnvNotFound => "resource_not_found",
             ConfigsServiceError::Unknown => "unknown_error",
         }
     }

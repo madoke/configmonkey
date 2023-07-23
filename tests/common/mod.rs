@@ -7,7 +7,10 @@ pub mod helpers {
                 rocket_uri_macro_create_app, rocket_uri_macro_delete_app,
                 rocket_uri_macro_get_apps, GetAppsDto,
             },
-            configs_routes::rocket_uri_macro_create_config,
+            configs_routes::{
+                rocket_uri_macro_create_config, rocket_uri_macro_delete_config,
+                rocket_uri_macro_get_config, GetConfigDto,
+            },
             dtos::ErrorMessageDto,
             envs_routes::{
                 rocket_uri_macro_create_env, rocket_uri_macro_delete_env,
@@ -158,6 +161,36 @@ pub mod helpers {
             .body(config)
             .dispatch()
             .await
+    }
+
+    // Request to get config
+    pub async fn h_get_config<'a>(
+        client: &'a Client,
+        app_slug: &str,
+        env_slug: &str,
+    ) -> LocalResponse<'a> {
+        client
+            .get(uri!(get_config(app_slug, env_slug)))
+            .dispatch()
+            .await
+    }
+
+    // Request to delete config
+    pub async fn h_delete_config<'a>(
+        client: &'a Client,
+        app_slug: &str,
+        env_slug: &str,
+    ) -> LocalResponse<'a> {
+        client
+            .delete(uri!(delete_config(app_slug, env_slug)))
+            .dispatch()
+            .await
+    }
+
+    /// Parse create config
+    pub async fn h_parse_get_config<'a>(response: LocalResponse<'a>) -> GetConfigDto {
+        let response_body = response.into_string().await.expect("Valid Response Body");
+        from_str(&response_body.as_str()).expect("Valid Config Dto")
     }
 
     // Errors

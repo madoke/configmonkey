@@ -132,7 +132,14 @@ pub async fn delete_config(
     .await;
 
     match result {
-        Ok(_result) => {
+        Ok(result) => {
+            if result.rows_affected() == 0 {
+                error!(
+                    "Env {} or app {} not found or no config exists",
+                    env_slug, app_slug
+                );
+                return Err(ConfigsRepoError::AppOrEnvNotFound);
+            }
             debug!(
                 "Successfully deleted config for app {} and env {} ",
                 app_slug, env_slug
