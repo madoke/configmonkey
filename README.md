@@ -1,5 +1,7 @@
 # Configmonkey
 
+![Configmonkey](logo.png)
+
 A lightweight configuration service that supports managing app configurations across multiple environments. Configmonkey was build with distributed environments in mind and it's goal is to provide an easy way to externalize and manage microservice configurations from a single place, without interfering with the application's ci/cd lifecycle.
 
 ## Features
