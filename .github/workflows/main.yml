@@ -1,4 +1,4 @@
-name: Integration Tests
+name: Main Workflow
 
 on:
   push:
@@ -18,11 +18,11 @@ jobs:
         run: cargo build
 
       - name: Start dependencies
-        run: docker-compose -f "docker-compose.yml" up -d --build
+        run: docker-compose -f "docker-compose.yaml" up -d --build
 
       - name: Run Tests
         run: cargo test
 
       - name: Stop dependencies
         if: always()
-        run: docker-compose -f "docker-compose.yml" down
+        run: docker-compose -f "docker-compose.yaml" down

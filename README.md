@@ -13,7 +13,7 @@ A lightweight configuration service that supports managing app configurations ac
 
 ## How to run
 
-> ⚠️ Configmonkey is still under development and might not be stable under load. We don't recommend using it in production at this stage.
+> Configmonkey is still under development and might not be stable under load. We don't recommend using it in production at this stage.
 
 ### Local development
 
