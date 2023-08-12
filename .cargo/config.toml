@@ -1,0 +1,10 @@
+# Cargo config file
+
+[env]
+# Required by sqlx::test for managing databases when running tests locally.
+# Replace this variable with the appropriate connection string if you're 
+# not using docker-compose.yaml for local development
+DATABASE_URL = "postgres://postgres:configmonkey@localhost:5432"
+
+# Rocket configuration for running locally with 'cargo run'
+ROCKET_DATABASES = "{postgres_configmonkey={url=\"postgres://postgres:configmonkey@localhost:5432/configmonkey\"}}"

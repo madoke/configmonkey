@@ -1,2 +1,0 @@
-[default.databases.postgres_configmonkey]
-url="postgres://postgres:configmonkey@localhost:5432/configmonkey"
