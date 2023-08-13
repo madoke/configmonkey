@@ -14,16 +14,51 @@ paths:
     get:
       tags:
         - Applications
-      summary: List available applications
-      description: List available applications
+      summary: Get applications
+      description: Returns a paginated list containing available applications. Navigation can be done by adjusting the limit and offset parameters
       operationId: getApplications
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
       responses:
         "200":
           description: Applications retrieved successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Application"
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Application"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+              examples:
+                "Page with elements":
+                  value:
+                    data:
+                      - name: Configmonkey
+                        slug: configmonkey
+                        created_at: "2023-08-13T00:00:00Z"
+                        updated_at: "2023-08-13T00:00:00Z"
+                      - name: Foo
+                        slug: foo
+                        created_at: "2023-08-13T00:00:00Z"
+                        updated_at: "2023-08-13T00:00:00Z"
+                    pagination:
+                      count: 2
+                      offset: 2
+                      limit: 2
+                      next: /v1/apps?limit=2&offset=2
+                      prev: /v1/apps?limit=2&offset=0
+                "Empty Page":
+                  value:
+                    data: []
+                    pagination:
+                      count: 0
+                      offset: 0
+                    limit: 10
     post:
       tags:
         - Applications
@@ -170,35 +205,92 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/EnvironmentSlug"
+    Offset:
+      name: offset
+      in: query
+      required: false
+      description: Maximum entries to skip
+      schema:
+        $ref: "#/components/schemas/Offset"
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Maximum entries to request
+      schema:
+        $ref: "#/components/schemas/Limit"
   schemas:
-    ResourceName:
+    Name:
       type: string
       pattern: '^\w+(\s+\w+)*$'
-    ResourceSlug:
+      description: The name of a given resource. Only supports word characters and whitespaces
+      examples:
+        - Config Monkey
+        - Configmonkey01
+    Slug:
       type: string
       pattern: '^[a-z0-9\-]+$'
-    ResourceDate:
+      description: The slug (URI) of a given resource. Only supports lowercase alphanumeric characters and dashes (`-`)
+      examples:
+        - config-monkey
+        - configmonkey01
+    Date:
       type: string
       format: date-time
+      description: Dates are represented in the UTC timezone using the ISO 8601 format
       example: 2023-08-13T00:00:00Z
+    Limit:
+      type: integer
+      format: int32
+      description: Maximum entries requested or to request
+      example: 5
+    Offset:
+      type: integer
+      format: int32
+      description: Number of entries skipped or to skip
+      example: 5
+    Pagination:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int32
+          description: Total entries returned
+          example: 5
+        offset:
+          allOf:
+            - $ref: "#/components/schemas/Offset"
+          description: Maximum entries skipped
+        limit:
+          allOf:
+            - $ref: "#/components/schemas/Limit"
+          description: Maximum entries requested
+        next:
+          type: string
+          description: URI path to the next page
+          example: "/v1/apps?limit=5&offset=10"
+        prev:
+          type: string
+          description: URI path to the previous page
+          example: "/v1/apps?limit=15&offset=0"
     ApplicationName:
       allOf:
-        - $ref: "#/components/schemas/ResourceName"
+        - $ref: "#/components/schemas/Name"
       description: The application's name
       example: Configmonkey
     ApplicationSlug:
       allOf:
-        - $ref: "#/components/schemas/ResourceSlug"
+        - $ref: "#/components/schemas/Slug"
       description: The application's unique slug
       example: configmonkey
     EnvironmentName:
       allOf:
-        - $ref: "#/components/schemas/ResourceName"
+        - $ref: "#/components/schemas/Name"
       description: The environment's name
       example: Production
     EnvironmentSlug:
       allOf:
-        - $ref: "#/components/schemas/ResourceSlug"
+        - $ref: "#/components/schemas/Slug"
       description: The environment's unique slug
       example: production
     ConfigurationValue:
@@ -223,11 +315,11 @@ components:
           $ref: "#/components/schemas/ApplicationSlug"
         created_at:
           allOf:
-            - $ref: "#/components/schemas/ResourceDate"
+            - $ref: "#/components/schemas/Date"
           description: Date when the application was created
         updated_at:
           allOf:
-            - $ref: "#/components/schemas/ResourceDate"
+            - $ref: "#/components/schemas/Date"
           description: Date when the application was last updated
     CreateEnvironment:
       type: object
@@ -245,11 +337,11 @@ components:
           $ref: "#/components/schemas/EnvironmentSlug"
         created_at:
           allOf:
-            - $ref: "#/components/schemas/ResourceDate"
+            - $ref: "#/components/schemas/Date"
           description: Date when the environment was created
         updated_at:
           allOf:
-            - $ref: "#/components/schemas/ResourceDate"
+            - $ref: "#/components/schemas/Date"
           description: Date when the environment was last updated
     CreateConfiguration:
       $ref: "#/components/schemas/ConfigurationValue"
@@ -260,9 +352,9 @@ components:
           $ref: "#/components/schemas/ConfigurationValue"
         created_at:
           allOf:
-            - $ref: "#/components/schemas/ResourceDate"
+            - $ref: "#/components/schemas/Date"
           description: Date when the configuration was created
         updated_at:
           allOf:
-            - $ref: "#/components/schemas/ResourceDate"
+            - $ref: "#/components/schemas/Date"
           description: Date when the configuration was last updated
