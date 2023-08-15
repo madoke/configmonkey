@@ -2,6 +2,31 @@ openapi: 3.0.3
 info:
   title: Configmonkey - API Reference
   version: 0.0.1
+  description: >
+    # Overview
+
+    Configmonkey's data architecture is structured in three main entities/resources: `Applications`, `Environments` and 
+    `Configurations`, the first two describing the context where each individual set of configuration values lives, The
+    hierarchy follows the scheme: `Application > Environment > Configuration`. Therefore, creating or accessing `Configurations`
+    assumes knowledge of an `Application` and `Environment` which were previously setup.
+
+    ## Applications
+
+    As the name suggests, we recommend that users match this resource with the program they're adding to Configmokey. `Applications`
+    are the root level container and they can have multiple `Environments`.
+
+    ## Environments
+
+    We recommend mirroring the number of environments 1:1, with each individual deployment of the application (e.g. Production,
+    Staging, Development), however  the API doesn't enforce it since it knows nothing about the semantics of `Environments`, 
+    except that there can be more than one and they can have only one `Application`.
+
+    ## Configurations
+
+    The leaf node of the configuration hierarchy. Each `Configuration` belongs to one `Environment`, and there can be only one 
+    per `Environment`. `Configurations` are hierarchical and support multiple variables and groups of variables, structured in a tree
+    data structure pretty much like a JSON file.
+
 tags:
   - name: Applications
     description: CRUD over aplications
@@ -21,7 +46,7 @@ paths:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
-        "200":
+        "200 Ok":
           description: Applications retrieved successfully
           content:
             application/json:
@@ -35,7 +60,7 @@ paths:
                   pagination:
                     $ref: "#/components/schemas/Pagination"
               examples:
-                "Page with elements":
+                "Page with applications":
                   value:
                     data:
                       - name: Configmonkey
@@ -62,8 +87,8 @@ paths:
     post:
       tags:
         - Applications
-      summary: Create a new application
-      description: Create a new application
+      summary: Create application
+      description: Creates a new application. The slug must be unique (to be used in URI paths for navigation) and both the name and the slug must match their respective regular expressions specified below
       operationId: createApplication
       requestBody:
         description: Create a new application
@@ -71,14 +96,49 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/CreateApplication"
+            examples:
+              "Create application":
+                name: Configmonkey
+                slug: configmonkey
         required: true
       responses:
-        "201":
+        "201 Created":
           description: Application created successfully
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Application"
+              example:
+                value:
+                  name: Configmonkey
+                  slug: configmonkey
+                  created_at: "2023-08-13T00:00:00Z"
+                  updated_at: "2023-08-13T00:00:00Z"
+        "400 Bad request":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                "Invalid Name":
+                  value:
+                    code: invalid_name
+                    message: The name contains invalid characters. Only letters, numbers, spaces and underscore (_) are allowed
+                "Invalid Slug":
+                  value:
+                    code: invalid_slug
+                    message: The slug contains invalid characters. Only lowercase letters, numbers and dash (-) are allowed
+        "409 Conflict":
+          description: Application already exists (Duplicate slug)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                value:
+                  code: duplicate_slug
+                  message: An app with the same slug already exists
   /v1/apps/{app_slug}:
     parameters:
       - $ref: "#/components/parameters/ApplicationSlug"
@@ -86,12 +146,23 @@ paths:
     delete:
       tags:
         - Applications
-      summary: Delete existing application
-      description: Delete existing application
+      summary: Delete application
+      description: Deletes an existing application. The app must not have any created environment, otherwise it will fail
       operationId: deleteApplication
       responses:
-        "204":
-          description: Application Deleted Successfully
+        "204 No content":
+          description: Application deleted successfully
+        "422 Unprocessable content":
+          description: Unable to delete application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                "Application not empty":
+                  value:
+                    code: app_has_envs
+                    message: The environment could not be deleted because there are existing configs
   /v1/envs/{app_slug}:
     parameters:
       - $ref: "#/components/parameters/ApplicationSlug"
@@ -197,14 +268,16 @@ components:
       name: app_slug
       in: path
       required: true
+      description: The application's slug
       schema:
-        $ref: "#/components/schemas/ApplicationSlug"
+        $ref: "#/components/schemas/Slug"
     EnvironmentSlug:
       name: env_slug
       in: path
       required: true
+      description: The environment's slug
       schema:
-        $ref: "#/components/schemas/EnvironmentSlug"
+        $ref: "#/components/schemas/Slig"
     Offset:
       name: offset
       in: query
@@ -225,6 +298,7 @@ components:
       pattern: '^\w+(\s+\w+)*$'
       description: The name of a given resource. Only supports word characters and whitespaces
       examples:
+        - Configmonkey
         - Config Monkey
         - Configmonkey01
     Slug:
@@ -232,6 +306,7 @@ components:
       pattern: '^[a-z0-9\-]+$'
       description: The slug (URI) of a given resource. Only supports lowercase alphanumeric characters and dashes (`-`)
       examples:
+        - configmonkey
         - config-monkey
         - configmonkey01
     Date:
@@ -251,6 +326,7 @@ components:
       example: 5
     Pagination:
       type: object
+      description: Contains information on the current position and how to navigate a list
       properties:
         count:
           type: integer
@@ -273,26 +349,16 @@ components:
           type: string
           description: URI path to the previous page
           example: "/v1/apps?limit=15&offset=0"
-    ApplicationName:
-      allOf:
-        - $ref: "#/components/schemas/Name"
-      description: The application's name
-      example: Configmonkey
-    ApplicationSlug:
-      allOf:
-        - $ref: "#/components/schemas/Slug"
-      description: The application's unique slug
-      example: configmonkey
-    EnvironmentName:
-      allOf:
-        - $ref: "#/components/schemas/Name"
-      description: The environment's name
-      example: Production
-    EnvironmentSlug:
-      allOf:
-        - $ref: "#/components/schemas/Slug"
-      description: The environment's unique slug
-      example: production
+    Error:
+      type: object
+      description: An error representation returned by API calls that don't succeed
+      properties:
+        code:
+          type: string
+          description: A short code representing the error (To be used for automated error handling)
+        message:
+          type: string
+          description: A human readable message describing the error details
     ConfigurationValue:
       type: string
       format: json
@@ -303,16 +369,25 @@ components:
       type: object
       properties:
         name:
-          $ref: "#/components/schemas/ApplicationName"
+          allOf:
+            - $ref: "#/components/schemas/Name"
+          description: The application's name
         slug:
-          $ref: "#/components/schemas/ApplicationSlug"
+          allOf:
+            - $ref: "#/components/schemas/Slug"
+          description: The environment's unique slug
     Application:
       type: object
+      description: Represents an application that can be deployed to multiple environments, each with its own configuration.
       properties:
         name:
-          $ref: "#/components/schemas/ApplicationName"
+          allOf:
+            - $ref: "#/components/schemas/Name"
+          description: The application's name
         slug:
-          $ref: "#/components/schemas/ApplicationSlug"
+          allOf:
+            - $ref: "#/components/schemas/Slug"
+          description: The environment's unique slug
         created_at:
           allOf:
             - $ref: "#/components/schemas/Date"
