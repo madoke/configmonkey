@@ -1,0 +1,42 @@
+get:
+  tags:
+    - Configurations
+  summary: Get environment configuration properties
+  description: Get environment configuration properties
+  operationId: getConfigurations
+  responses:
+    "200":
+      description: Configuration retrieved successfully
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Configuration"
+post:
+  tags:
+    - Configurations
+  summary: Create a new configuration
+  description: Create a new configuration
+  operationId: createConfiguration
+  requestBody:
+    description: Create a new configuration
+    content:
+      application/json:
+        schema:
+          $ref: "#/components/schemas/CreateConfiguration"
+    required: true
+  responses:
+    "201":
+      description: Configuration created successfully
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Configuration"
+delete:
+  tags:
+    - Configurations
+  summary: Delete existing configuration
+  description: Delete existing configuration
+  operationId: deleteConfiguration
+  responses:
+    "204":
+      description: Configuration Deleted Successfully

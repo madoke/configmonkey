@@ -1,0 +1,125 @@
+get:
+  tags:
+    - Environments
+  summary: Get environments
+  description: Returns a paginated list containing all environments under a given application. Navigation can be done by adjusting the limit and offset parameters
+  operationId: getEnvironments
+  parameters:
+    - $ref: "#/components/parameters/Limit"
+    - $ref: "#/components/parameters/Offset"
+  responses:
+    "200 Ok":
+      description: Environments retrieved successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Environment"
+              pagination:
+                $ref: "#/components/schemas/Pagination"
+          examples:
+            "Page with environments":
+              value:
+                data:
+                  - name: Production
+                    slug: production
+                    created_at: "2023-08-13T00:00:00Z"
+                    updated_at: "2023-08-13T00:00:00Z"
+                  - name: Development
+                    slug: development
+                    created_at: "2023-08-13T00:00:00Z"
+                    updated_at: "2023-08-13T00:00:00Z"
+                pagination:
+                  count: 2
+                  offset: 2
+                  limit: 2
+                  next: /v1/apps?limit=2&offset=2
+                  prev: /v1/apps?limit=2&offset=0
+            "Empty Page":
+              value:
+                data: []
+                pagination:
+                  count: 0
+                  offset: 0
+                limit: 10
+post:
+  tags:
+    - Environments
+  summary: Create environment
+  description: Creates a new environment. The slug must be unique under the context of the given application, and both the name and the slug much match the regular expressions described below
+  operationId: createEnvironment
+  requestBody:
+    description: Create a new environment
+    content:
+      application/json:
+        schema:
+          type: object
+          description: Required parameters for creating a new environment
+          properties:
+            name:
+              allOf:
+                - $ref: "#/components/schemas/Name"
+              description: The environment's name
+              required: true
+            slug:
+              allOf:
+                - $ref: "#/components/schemas/Slug"
+              description: The environemnt's unique slug
+              required: true
+        examples:
+          "Create environment":
+            value:
+              name: Production
+              slug: production
+  responses:
+    "201 Created":
+      description: Environment created successfully
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Enviroment"
+          example:
+            value:
+              name: Production
+              slug: production
+              created_at: "2023-08-13T00:00:00Z"
+              updated_at: "2023-08-13T00:00:00Z"
+    "400 Bad request":
+      description: Invalid request body
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            "Invalid Name":
+              value:
+                code: invalid_name
+                message: The name contains invalid characters. Only letters, numbers, spaces and underscore (_) are allowed
+            "Invalid Slug":
+              value:
+                code: invalid_slug
+                message: The slug contains invalid characters. Only lowercase letters, numbers and dash (-) are allowed
+    "409 Conflict":
+      description: Environment already exists (Duplicate slug)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            value:
+              code: duplicate_slug
+              message: An env with the same slug already exists
+    "404 Not found":
+      description: Application not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            value:
+              code: resource_not_found
+              message: Resource not found

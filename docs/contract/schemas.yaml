@@ -1,0 +1,129 @@
+Name:
+  type: string
+  pattern: '^\w+(\s+\w+)*$'
+  description: The name of a given resource. Only supports word characters and whitespaces
+  examples:
+    - Configmonkey
+    - Config Monkey
+    - Configmonkey01
+Slug:
+  type: string
+  pattern: '^[a-z0-9\-]+$'
+  description: The slug (URI) of a given resource. Only supports lowercase alphanumeric characters and dashes (`-`)
+  examples:
+    - configmonkey
+    - config-monkey
+    - configmonkey01
+Date:
+  type: string
+  format: date-time
+  description: Dates are represented in the UTC timezone using the ISO 8601 format
+  example: 2023-08-13T00:00:00Z
+Limit:
+  type: integer
+  format: int32
+  description: Maximum entries requested or to request
+  example: 5
+Offset:
+  type: integer
+  format: int32
+  description: Number of entries skipped or to skip
+  example: 5
+Pagination:
+  type: object
+  description: Contains information on the current position and how to navigate a list
+  properties:
+    count:
+      type: integer
+      format: int32
+      description: Total entries returned
+      example: 5
+    offset:
+      allOf:
+        - $ref: "#/components/schemas/Offset"
+      description: Maximum entries skipped
+    limit:
+      allOf:
+        - $ref: "#/components/schemas/Limit"
+      description: Maximum entries requested
+    next:
+      type: string
+      description: URI path to the next page
+      example: "/v1/apps?limit=5&offset=10"
+    prev:
+      type: string
+      description: URI path to the previous page
+      example: "/v1/apps?limit=15&offset=0"
+Error:
+  type: object
+  description: An error representation returned by API calls that don't succeed
+  properties:
+    code:
+      type: string
+      description: A short code representing the error (To be used for automated error handling)
+    message:
+      type: string
+      description: A human readable message describing the error details
+ConfigurationValue:
+  type: string
+  format: json
+  example:
+    key1: value1
+    key2: value2
+
+Application:
+  type: object
+  description: Represents an application that can be deployed to multiple environments, each with its own configuration
+  properties:
+    name:
+      allOf:
+        - $ref: "#/components/schemas/Name"
+      description: The application's name
+    slug:
+      allOf:
+        - $ref: "#/components/schemas/Slug"
+      description: The application's unique slug
+    created_at:
+      allOf:
+        - $ref: "#/components/schemas/Date"
+      description: Date when the application was created
+    updated_at:
+      allOf:
+        - $ref: "#/components/schemas/Date"
+      description: Date when the application was last updated
+
+Environment:
+  type: object
+  properties:
+    name:
+      allOf:
+        - $ref: "#/components/schemas/Name"
+      description: The environment's name
+    slug:
+      allOf:
+        - $ref: "#/components/schemas/Slug"
+      description: The environment's unique slug
+    created_at:
+      allOf:
+        - $ref: "#/components/schemas/Date"
+      description: Date when the environment was created
+    updated_at:
+      allOf:
+        - $ref: "#/components/schemas/Date"
+      description: Date when the environment was last updated
+
+CreateConfiguration:
+  $ref: "#/components/schemas/ConfigurationValue"
+Configuration:
+  type: object
+  properties:
+    config:
+      $ref: "#/components/schemas/ConfigurationValue"
+    created_at:
+      allOf:
+        - $ref: "#/components/schemas/Date"
+      description: Date when the configuration was created
+    updated_at:
+      allOf:
+        - $ref: "#/components/schemas/Date"
+      description: Date when the configuration was last updated

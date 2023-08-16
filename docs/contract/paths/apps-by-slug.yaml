@@ -1,0 +1,34 @@
+parameters:
+  - $ref: "#/components/parameters/ApplicationSlug"
+
+delete:
+  tags:
+    - Applications
+  summary: Delete application
+  description: Deletes an existing application. The app must not have any created environment, otherwise it will fail
+  operationId: deleteApplication
+  responses:
+    "204 No content":
+      description: Application deleted successfully
+    "404 Not found":
+      description: Application not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            "Application not empty":
+              value:
+                code: not_found
+                message: Resource not found
+    "422 Unprocessable content":
+      description: Application still has environments
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            "Application not empty":
+              value:
+                code: app_has_envs
+                message: The application could not be deleted because there are existing environments

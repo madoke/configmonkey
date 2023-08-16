@@ -1,0 +1,28 @@
+ApplicationSlug:
+  name: app_slug
+  in: path
+  required: true
+  description: The application's slug
+  schema:
+    $ref: "#/components/schemas/Slug"
+EnvironmentSlug:
+  name: env_slug
+  in: path
+  required: true
+  description: The environment's slug
+  schema:
+    $ref: "#/components/schemas/Slug"
+Offset:
+  name: offset
+  in: query
+  required: false
+  description: Maximum entries to skip
+  schema:
+    $ref: "#/components/schemas/Offset"
+Limit:
+  name: limit
+  in: query
+  required: false
+  description: Maximum entries to request
+  schema:
+    $ref: "#/components/schemas/Limit"
