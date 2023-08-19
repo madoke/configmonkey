@@ -48,11 +48,10 @@ If everything started correctly, the application will then be available at http:
 
 ### Full stack
 
-{% note %}
+> [!WARNING]
+> Configmonkey is still under development and is not stable for production use.
 
-**Note:** Configmonkey is still under development and is not stable for production use. At a later stage we will release a proper guide on how to install configmonkey on a traditional container setup
-
-{% endnote %}
+We plan to release instructions on how to properly host configmonkey at later stages, but in the meantime, a simple way to do it is to use the `hosting/docker-compose.yml` file provided in this repository. Alternatively, head to [Docker Hub](https://hub.docker.com/r/madoke/configmonkey), which also contains the same docker compose example.
 
 ## Building
 

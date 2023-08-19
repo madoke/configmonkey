@@ -1,4 +1,4 @@
-# Docker compose setup for local development (Dependencies only)
+# Docker compose file for local development (Dependencies only)
 version: "3.8"
 services:
   db:
@@ -17,7 +17,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
   # Optional (For viewing/managing the db)
   adminer:
     image: adminer

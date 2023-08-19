@@ -1,0 +1,31 @@
+# Docker compose file for hosting configmonkey and dependencies
+#
+version: "3.8"
+services:
+  configmonkey:
+    image: madoke/configmonkey:latest
+    restart: always
+    user: configmonkey
+    environment:
+      - ROCKET_DATABASES={postgres_configmonkey={url="postgres://postgres:configmonkey@db:5432/configmonkey"}}
+      - ROCKET_ADDRESS=0.0.0.0
+    # Replace 8000:8000 with the port where you want to expose configmonkey
+    ports:
+      - 8000:8000
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres
+    restart: always
+    user: postgres
+    environment:
+      - POSTGRES_DB=configmonkey
+      - POSTGRES_PASSWORD=configmonkey
+    expose:
+      - 5432
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
