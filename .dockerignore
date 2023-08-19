@@ -1,11 +1,15 @@
 # Include any files or directories that you don't want to be copied to your
+
 # container here (e.g., local build artifacts, temporary files, etc.).
+
 #
+
 # For more help, visit the .dockerignore file reference guide at
+
 # https://docs.docker.com/engine/reference/builder/#dockerignore-file
 
 **/.DS_Store
-**/__pycache__
+**/**pycache**
 **/.venv
 **/.classpath
 **/.dockerignore
@@ -18,17 +22,18 @@
 **/.vs
 **/.vscode
 **/*.*proj.user
-**/*.dbmdl
-**/*.jfm
+**/\*.dbmdl
+**/_.jfm
 **/bin
 **/charts
-**/docker-compose*
-**/compose*
-**/Dockerfile*
+\*\*/docker-compose_
+**/compose\*
+**/Dockerfile\*
 **/node_modules
 **/npm-debug.log
 **/obj
 **/secrets.dev.yaml
 **/values.dev.yaml
+**/target
 LICENSE
 README.md
