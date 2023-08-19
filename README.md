@@ -3,6 +3,7 @@
 ![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/madoke/configmonkey/main.yml)
 ![Commits](https://img.shields.io/github/commit-activity/m/madoke/configmonkey)
 ![Contributors](https://img.shields.io/github/contributors/madoke/configmonkey)
+[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/madoke/configmonkey?label=docker)](https://hub.docker.com/r/madoke/configmonkey)
 
 A lightweight configuration service that supports managing app configurations across multiple environments. Inspired by tools like [etcd](https://etcd.io/), [consul kv](https://developer.hashicorp.com/consul/docs/dynamic-app-config/kv) and [spring cloud config](https://docs.spring.io/spring-cloud-config/docs/current/reference/html/), Configmonkey was built with distributed environments in mind, and it's goal is to provide an easy way to externalize and manage microservice configurations from a single place, without interfering with the application's ci/cd lifecycle.
 
