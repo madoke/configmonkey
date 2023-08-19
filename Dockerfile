@@ -60,4 +60,4 @@ RUN adduser \
 USER configmonkey
 
 # Copy the executable from the "build" stage.
-COPY --from=builder --chown=configmonkey:configmonkey  /usr/local/cargo/bin/config-monkey /usr/local/bin/config-monkey
+COPY --from=builder --chown=configmonkey:configmonkey  /usr/local/cargo/bin/configmonkey /usr/local/bin/configmonkey
