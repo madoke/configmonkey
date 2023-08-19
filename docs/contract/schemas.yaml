@@ -6,6 +6,7 @@ Name:
     - Configmonkey
     - Config Monkey
     - Configmonkey01
+
 Slug:
   type: string
   pattern: '^[a-z0-9\-]+$'
@@ -14,21 +15,25 @@ Slug:
     - configmonkey
     - config-monkey
     - configmonkey01
+
 Date:
   type: string
   format: date-time
   description: Dates are represented in the UTC timezone using the ISO 8601 format
   example: 2023-08-13T00:00:00Z
+
 Limit:
   type: integer
   format: int32
   description: Maximum entries requested or to request
   example: 5
+
 Offset:
   type: integer
   format: int32
   description: Number of entries skipped or to skip
   example: 5
+
 Pagination:
   type: object
   description: Contains information on the current position and how to navigate a list
@@ -53,7 +58,8 @@ Pagination:
     prev:
       type: string
       description: URI path to the previous page
-      example: "/v1/apps?limit=15&offset=0"
+      example: /v1/apps?limit=15&offset=0
+
 Error:
   type: object
   description: An error representation returned by API calls that don't succeed
@@ -64,12 +70,6 @@ Error:
     message:
       type: string
       description: A human readable message describing the error details
-ConfigurationValue:
-  type: string
-  format: json
-  example:
-    key1: value1
-    key2: value2
 
 Application:
   type: object
@@ -112,13 +112,17 @@ Environment:
         - $ref: "#/components/schemas/Date"
       description: Date when the environment was last updated
 
-CreateConfiguration:
-  $ref: "#/components/schemas/ConfigurationValue"
 Configuration:
   type: object
+  description: A group of properties/values added to a given environment. Properties are structured hieararchically in a tree where the root is the environment and each property can either be a node or a leaf
   properties:
-    config:
-      $ref: "#/components/schemas/ConfigurationValue"
+    properties:
+      type: string
+      format: json
+      description: The property tree configured for a given environment
+      example:
+        key1: value1
+        key2: value2
     created_at:
       allOf:
         - $ref: "#/components/schemas/Date"
