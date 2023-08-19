@@ -44,7 +44,7 @@ FROM base AS final
 # RUN apt-get update && apt-get install -y extra-runtime-dependencies && rm -rf /var/lib/apt/lists/*
 
 # What the container should run when it is started.
-ENTRYPOINT [ "config-monkey" ]
+ENTRYPOINT [ "configmonkey" ]
 
 # Create a non-priveldged user that the app will run under.
 # See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#user
