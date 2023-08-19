@@ -1,5 +1,9 @@
 # Configmonkey
 
+[![Contributors](https://img.shields.io/github/contributors/madoke/configmonkey)](https://github.com/madoke/configmonkey/graphs/contributors)
+[![Commits](https://img.shields.io/github/commit-activity/m/madoke/configmonkey)](https://github.com/madoke/configmonkey/graphs/contributors)
+![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/:madoke/:configmonkey/:main)
+
 A lightweight configuration service that supports managing app configurations across multiple environments. Inspired by tools like [etcd](https://etcd.io/), [consul kv](https://developer.hashicorp.com/consul/docs/dynamic-app-config/kv) and [spring cloud config](https://docs.spring.io/spring-cloud-config/docs/current/reference/html/), Configmonkey was built with distributed environments in mind, and it's goal is to provide an easy way to externalize and manage microservice configurations from a single place, without interfering with the application's ci/cd lifecycle.
 
 **Table of Contents**
@@ -70,8 +74,6 @@ cargo test
 Run an http server from the `docs` folder or head to [https://madoke.github.io/configmonkey/#/](https://madoke.github.io/configmonkey/#/)
 
 ## Contributing
-
-[![Contributors](https://img.shields.io/github/contributors/madoke/configmonkey)](https://github.com/madoke/configmonkey/graphs/contributors) [![Commits](https://img.shields.io/github/commit-activity/m/madoke/configmonkey)](https://github.com/madoke/configmonkey/graphs/contributors)
 
 Configmonkey is a recent project and welcomes new contributors. Since this is still at an early stage of maturity, there are plenty of ways to contribute
 
