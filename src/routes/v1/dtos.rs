@@ -16,3 +16,10 @@ pub struct ErrorMessageDto {
     pub code: String,
     pub message: String,
 }
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct PaginatedListDto<T> {
+    pub data: Vec<T>,
+    pub pagination: PaginationDto,
+}

@@ -34,15 +34,23 @@ impl<'a> Responder<'a, 'static> for RoutesError {
 #[catch(404)]
 pub fn not_found() -> Json<ErrorMessageDto> {
     return Json(ErrorMessageDto {
-        code: "resource_not_found".to_string(),
+        code: "not_found".to_string(),
         message: "Resource not found".to_string(),
+    });
+}
+
+#[catch(400)]
+pub fn bad_request() -> Json<ErrorMessageDto> {
+    return Json(ErrorMessageDto {
+        code: "bad_request".to_string(),
+        message: "Unable to parse input parameters".to_string(),
     });
 }
 
 #[catch(default)]
 pub fn default_catcher() -> Json<ErrorMessageDto> {
     return Json(ErrorMessageDto {
-        code: "unknown_error".to_string(),
+        code: "unknown".to_string(),
         message: "Unknown Error".to_string(),
     });
 }

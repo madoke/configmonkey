@@ -11,11 +11,11 @@ pub mod helpers {
                 rocket_uri_macro_create_config, rocket_uri_macro_delete_config,
                 rocket_uri_macro_get_config, GetConfigDto,
             },
-            dtos::ErrorMessageDto,
-            envs_routes::{
+            domains_routes::{
                 rocket_uri_macro_create_env, rocket_uri_macro_delete_env,
                 rocket_uri_macro_get_envs, GetEnvDto, GetEnvsDto,
             },
+            dtos::ErrorMessageDto,
         },
     };
     use rocket::{
