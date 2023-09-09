@@ -20,8 +20,8 @@ pub struct GetDomainDto {
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
-pub struct CreateDomainInput<'a> {
-    slug: &'a str,
+pub struct CreateDomainDto {
+    slug: String,
 }
 
 fn to_http_status(error: &DomainsServiceError) -> Status {
@@ -41,9 +41,9 @@ pub struct CreateDomainSuccess(Json<GetDomainDto>);
 #[post("/v1/domains", format = "application/json", data = "<input>")]
 pub async fn create_domain(
     db: Connection<ConfigMonkeyDb>,
-    input: Json<CreateDomainInput<'_>>,
+    input: Json<CreateDomainDto>,
 ) -> Result<CreateDomainSuccess, RoutesError> {
-    let result = domains_service::create_domain(db, input.slug).await;
+    let result = domains_service::create_domain(db, input.slug.as_str()).await;
 
     return match result {
         Ok(domain) => Ok(CreateDomainSuccess(Json(GetDomainDto {
