@@ -1,18 +1,34 @@
-use crate::{
-    db::db::ConfigMonkeyDb,
-    models::config::{Config, ConfigType, ValueType},
-};
+use crate::models::config::{Config, ConfigValue, ConfigVersion};
 use chrono::{DateTime, Utc};
 use rocket::error;
-use rocket_db_pools::{
-    sqlx::{self},
-    Connection,
-};
-use sqlx::{Error, types::Uuid};
-use std::str::FromStr;
+use rocket_db_pools::sqlx::{self};
+use sqlx::{pool::PoolConnection, types::Uuid, Error, Postgres};
 
 pub enum ConfigsRepoError {
+    NotFound,
     Unknown,
+}
+
+#[derive(sqlx::FromRow, Debug)]
+struct ConfigEntity {
+    pub id: Uuid,
+    pub key: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(sqlx::FromRow, Debug)]
+struct ValueEntity {
+    pub id: Uuid,
+    pub value: String,
+    pub r#type: ValueTypeEntity,
+    pub version: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(sqlx::Type, Debug)]
+#[sqlx(type_name = "value_type", rename_all = "lowercase")]
+enum ValueTypeEntity {
+    String, Boolean, Number
 }
 
 fn map_sqlx_error(error: Error) -> ConfigsRepoError {
@@ -22,50 +38,48 @@ fn map_sqlx_error(error: Error) -> ConfigsRepoError {
             // Some(Cow::Borrowed("23505")) => ConfigsRepoError::ConfigAlreadyExists,
             _ => ConfigsRepoError::Unknown,
         },
-        // Error::RowNotFound => ConfigsRepoError::AppOrEnvNotFound,
+        Error::RowNotFound => ConfigsRepoError::NotFound,
         _ => ConfigsRepoError::Unknown,
     }
 }
 
-#[derive(sqlx::FromRow, Debug)]
-struct ConfigEntity {
-    pub id: Uuid,
-    pub domain_id: Uuid,
-    pub key: String,
-    pub r#type: ConfigType,
-    pub parent_id: Option<Uuid>,
-    pub created_at: DateTime<Utc>,
+fn to_value_type_entity(config_value: ConfigValue) -> ValueTypeEntity {
+    match config_value {
+        ConfigValue::Boolean(_) => ValueTypeEntity::Boolean,
+        ConfigValue::String(_) => ValueTypeEntity::String,
+        ConfigValue::Number(_) => ValueTypeEntity::Number,
+    }
 }
-#[derive(sqlx::FromRow, Debug)]
-struct ValueEntity {
-    pub config_id: Uuid,
-    pub value: String,
-    pub r#type: ValueType,
-    pub version: i32,
-    pub created_at: DateTime<Utc>,
+
+fn to_config_value(value_type: ValueTypeEntity, value: String) -> ConfigValue {
+    match value_type {
+        ValueTypeEntity::String => ConfigValue::String(value),
+        ValueTypeEntity::Boolean => ConfigValue::Boolean(value.parse::<bool>().unwrap()),
+        ValueTypeEntity::Number => ConfigValue::Number(value.parse::<f64>().unwrap()),
+    }
 }
 
 pub async fn create_config(
-    mut db: Connection<ConfigMonkeyDb>,
-    domain_slug: &str,
+    db: &mut PoolConnection<Postgres>,
+    domain_id: &str,
     key: &str,
-    config_type: ConfigType,
-    value_type: ValueType,
-    value: &str,
+    config_value: ConfigValue,
 ) -> Result<Config, ConfigsRepoError> {
     let config_result = sqlx::query_as::<_, ConfigEntity>(
-        "with domain_id as ( select id from domains where slug = $1 ) \
-      select id, domain_id, key, type, parent_id, created_at from configs \
-      where domain_id = (select id from domain_id) and key = $2",
+        "select id, key, created_at from configs \
+        where domain_id = $1::uuid and key = $2",
     )
-    .bind(domain_slug)
+    .bind(domain_id)
     .bind(key)
     .fetch_optional(&mut *db)
     .await;
 
     match config_result {
         Err(err) => {
-            error!("Error verifying if config exists: {:?}", err);
+            error!(
+                "[create_config] Error verifying if config exists: {:?}",
+                err
+            );
             Err(map_sqlx_error(err))
         }
         Ok(optional_config) => {
@@ -73,20 +87,18 @@ pub async fn create_config(
                 Some(config) => config,
                 None => {
                     let create_config_result = sqlx::query_as::<_, ConfigEntity>(
-                        "with domain_id as ( select id from domains where slug = $1 ) \
-                        insert into configs(domain_id, key, type, parent_id) \
-                        values((select id from domain_id), $2, $3, null) \
-                        returning id, domain_id, key, type, parent_id, created_at",
+                        "insert into configs(domain_id, key) \
+                        values($1::uuid, $2) \
+                        returning id, key, created_at",
                     )
-                    .bind(domain_slug)
+                    .bind(domain_id)
                     .bind(key)
-                    .bind(config_type)
                     .fetch_one(&mut *db)
                     .await;
 
                     match create_config_result {
                         Err(err) => {
-                            error!("Error creating config: {:?}", err);
+                            error!("[create_config] Error creating config: {:?}", err);
                             return Err(map_sqlx_error(err));
                         }
                         Ok(config) => config,
@@ -97,29 +109,30 @@ pub async fn create_config(
             let insert_value_result =  sqlx::query_as::<_, ValueEntity>(
               "with latest_version as (select version from values where config_id = $1 order by version desc limit 1) \
               insert into values(config_id, value, type, version) \
-              values($1, $2, $3, coalesce((select version from latest_version), 0) + 1) \
-              returning config_id, value, type, version, created_at",
+              values($1, $2, $3::value_type, coalesce((select version from latest_version), 0) + 1) \
+              returning id, value, type, version, created_at",
             )
             .bind(config.id)
-            .bind(value)
-            .bind(value_type)
+            .bind(config_value.to_string())
+            .bind(to_value_type_entity(config_value))
             .fetch_one(&mut *db)
             .await;
 
             match insert_value_result {
                 Err(err) => {
-                    error!("Error inserting value: {:?}", err);
+                    error!("[create_config] Error inserting value: {:?}", err);
                     return Err(map_sqlx_error(err));
                 }
                 Ok(value) => Ok(Config {
-                    id: value.config_id.to_string(),
+                    id: config.id.to_string(),
                     key: config.key,
-                    config_type: config.r#type,
-                    value_type: value.r#type,
-                    version: value.version,
-                    value: value.value,
                     created_at: config.created_at,
-                    updated_at: value.created_at,
+                    versions: vec![ConfigVersion {
+                        id: value.id.to_string(),
+                        index: value.version,
+                        value: to_config_value(value.r#type, value.value),
+                        created_at: value.created_at,
+                    }],
                 }),
             }
         }

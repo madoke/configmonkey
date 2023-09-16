@@ -5,9 +5,10 @@ use rocket_db_pools::{
     sqlx::{self, types::Uuid},
     Connection,
 };
-use sqlx::Error;
+use sqlx::{Error, Postgres, pool::PoolConnection};
 use std::borrow::Cow;
 
+#[derive(Debug)]
 pub enum DomainsRepoError {
     Unknown,
     DuplicateSlug,
@@ -35,6 +36,7 @@ fn map_sqlx_error(error: Error) -> DomainsRepoError {
     }
 }
 
+/// Create a new domain
 pub async fn create_domain(
     mut db: Connection<ConfigMonkeyDb>,
     slug: &str,
@@ -65,6 +67,7 @@ pub async fn create_domain(
     }
 }
 
+/// Retrieve the list of domains
 pub async fn get_domains(
     mut db: Connection<ConfigMonkeyDb>,
     limit: i32,
@@ -93,6 +96,33 @@ pub async fn get_domains(
         }
         Err(err) => {
             error!("Error retrieving domains. Error: {:?}", err);
+            Err(map_sqlx_error(err))
+        }
+    }
+}
+
+/// Retrieve domain by slug
+pub async fn get_domain_by_slug(
+    db: &mut PoolConnection<Postgres>,
+    domain_slug: &str,
+) -> Result<Domain, DomainsRepoError> {
+    let domain_result = sqlx::query_as::<_, DomainEntity>(
+        "select id, slug, created_at from domains where slug = $1",
+    )
+    .bind(domain_slug)
+    .fetch_one( db)
+    .await;
+    match domain_result {
+        Ok(domain) => {
+            debug!("Successfully retrieved domain: {:?}", domain);
+            Ok(Domain {
+                id: domain.id.to_string(),
+                slug: domain.slug,
+                created_at: domain.created_at,
+            })
+        }
+        Err(err) => {
+            error!("Error retrieving domain. Error: {:?}", err);
             Err(map_sqlx_error(err))
         }
     }

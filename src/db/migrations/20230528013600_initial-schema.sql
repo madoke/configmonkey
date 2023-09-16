@@ -7,18 +7,14 @@ create table domains (
     constraint domains_unique_slug unique(slug)
 );
 
-create type config_type as enum ('value', 'object', 'array');
 create type value_type as enum ('string', 'number', 'boolean');
 
 create table configs (
     id uuid default uuid_generate_v4() primary key,
     domain_id uuid not null,
     key varchar(512) not null,
-    type config_type not null,
-    parent_id uuid,
     created_at timestamptz not null default now(),
     constraint configs_fk_domains foreign key(domain_id) references domains(id),
-    constraint configs_fk_configs foreign key(parent_id) references configs(id),
     constraint configs_unique_key unique(domain_id, key)
 );
 

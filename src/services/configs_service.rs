@@ -1,32 +1,29 @@
-use std::str::FromStr;
-
 use crate::{
     db::db::ConfigMonkeyDb,
-    models::config::{Config, ConfigType, ValueType},
-    repos::configs_repo::{self},
+    models::config::{Config, ConfigValue},
+    repos::{
+        configs_repo::{self, ConfigsRepoError},
+        domains_repo::{self, DomainsRepoError},
+    },
 };
+
+use rocket::error;
 use rocket_db_pools::Connection;
 
 pub enum ConfigsServiceError {
     Unknown,
-    UnknownValueType,
-    UnknownConfigType,
     DomainNotFound,
 }
 
 impl ConfigsServiceError {
     pub fn code(&self) -> &'static str {
         match *self {
-            ConfigsServiceError::UnknownValueType => "unknown_value_type",
-            ConfigsServiceError::UnknownConfigType => "unknown_config_type",
             ConfigsServiceError::DomainNotFound => "domain_not_found",
             ConfigsServiceError::Unknown => "unknown_error",
         }
     }
     pub fn message(&self) -> &'static str {
         match *self {
-            ConfigsServiceError::UnknownValueType => "Unknown value type",
-            ConfigsServiceError::UnknownConfigType => "Unknown config type",
             ConfigsServiceError::DomainNotFound => "Domain not found",
             ConfigsServiceError::Unknown => "Unknown error",
         }
@@ -34,35 +31,35 @@ impl ConfigsServiceError {
 }
 
 pub async fn create_config(
-    db: Connection<ConfigMonkeyDb>,
+    mut db: Connection<ConfigMonkeyDb>,
     domain_slug: &str,
     key: &str,
-    config_type: &str,
-    value_type: &str,
-    value: &str,
+    config_value: ConfigValue,
 ) -> Result<Config, ConfigsServiceError> {
-    // Parse input
-    let value_type_parsed = ValueType::from_str(value_type);
-    if let Err(_parse_error) = value_type_parsed {
-        return Err(ConfigsServiceError::UnknownValueType);
+    // Get domain
+    let domain_result = domains_repo::get_domain_by_slug(&mut *db, domain_slug).await;
+    if let Err(get_domain_error) = domain_result {
+        match get_domain_error {
+            DomainsRepoError::NotFound => return Err(ConfigsServiceError::DomainNotFound),
+            _ => {
+                error!("Unknown error fetching domains {:?}", get_domain_error);
+                return Err(ConfigsServiceError::Unknown);
+            }
+        }
     }
-    let config_type_parsed = ConfigType::from_str(config_type);
-    if let Err(_parse_error) = config_type_parsed {
-        return Err(ConfigsServiceError::UnknownConfigType);
-    }
+
     // Create config
     let result = configs_repo::create_config(
-        db,
-        domain_slug,
+        &mut *db,
+        domain_result.unwrap().id.as_str(),
         key,
-        config_type_parsed.unwrap(),
-        value_type_parsed.unwrap(),
-        value,
+        config_value,
     )
     .await;
     match result {
-        Ok(created_env) => Ok(created_env),
+        Ok(created_config) => Ok(created_config),
         Err(configs_repo_err) => match configs_repo_err {
+            ConfigsRepoError::NotFound => Err(ConfigsServiceError::DomainNotFound),
             _ => Err(ConfigsServiceError::Unknown),
         },
     }
