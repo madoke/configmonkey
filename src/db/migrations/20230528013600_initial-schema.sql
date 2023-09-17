@@ -25,6 +25,6 @@ create table values (
     version int not null,
     value text not null,
     created_at timestamptz not null default now(),
-    constraint values_fk_configs foreign key(config_id) references configs(id),
+    constraint values_fk_configs foreign key(config_id) references configs(id) on delete cascade,
     constraint values_unique_version unique(config_id, version)
 )

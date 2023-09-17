@@ -67,27 +67,7 @@ pub async fn get_domains(
 
     let result = domains_repo::get_domains(db, limit, offset).await;
     match result {
-        Ok(domains) => {
-            let count = domains.len() as i32;
-            Ok(List {
-                items: domains,
-                count,
-                limit,
-                offset,
-                next_offset: if count == limit {
-                    Some(offset + limit)
-                } else {
-                    None
-                },
-                prev_offset: if offset == 0 {
-                    None
-                } else if offset - limit >= 0 {
-                    Some(offset - limit)
-                } else {
-                    Some(0)
-                },
-            })
-        }
+        Ok(domains) => Ok(List::from_items(domains, limit, offset)),
         Err(err) => match err {
             _ => Err(DomainsServiceError::Unknown),
         },

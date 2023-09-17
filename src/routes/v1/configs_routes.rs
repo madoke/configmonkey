@@ -10,9 +10,10 @@ use rocket::serde::{
     Deserialize, Serialize,
 };
 
-use rocket::post;
+use rocket::{delete, get, post};
 use rocket_db_pools::Connection;
 
+use super::dtos::{PaginatedListDto, PaginationDto};
 use super::errors::RoutesError;
 
 #[derive(Serialize, Deserialize)]
@@ -28,13 +29,17 @@ pub struct GetVersionDto {
 pub struct GetConfigDto {
     pub key: String,
     pub created_at: DateTime<Utc>,
-    pub versions: Vec<GetVersionDto>,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct CreateConfigDto {
     pub key: String,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct CreateVersionDto {
     pub value: Value,
 }
 
@@ -77,66 +82,186 @@ pub async fn create_config(
     input: Json<CreateConfigDto>,
 ) -> Result<CreateConfigSuccess, RoutesError> {
     let key = input.key.as_str();
-    let config_value = from_value(&input.value);
 
-    let result = configs_service::create_config(db, domain_slug, key, config_value).await;
+    let result = configs_service::create_config(db, domain_slug, key).await;
 
     match result {
-        Ok(config) => {
-            let mut versions: Vec<GetVersionDto> = Vec::new();
-            for version in config.versions {
-                versions.push(GetVersionDto {
-                    id: version.index,
-                    created_at: version.created_at,
-                    value: to_value(version.value),
-                })
-            }
-            Ok(CreateConfigSuccess(Json(GetConfigDto {
-                key: config.key,
-                created_at: config.created_at,
-                versions: versions,
-            })))
-        }
+        Ok(config) => Ok(CreateConfigSuccess(Json(GetConfigDto {
+            key: config.key,
+            created_at: config.created_at,
+        }))),
         Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
     }
 }
 
-// #[derive(Responder)]
-// #[response(status = 200, content_type = "json")]
-// pub struct GetConfigResponse(Json<GetConfigsDto>);
+#[derive(Responder)]
+#[response(status = 200, content_type = "json")]
+pub struct GetConfigResponse(Json<GetConfigDto>);
 
-// #[get("/v1/configs/<domain_slug>")]
-// pub async fn get_config(
-//     db: Connection<ConfigMonkeyDb>,
-//     domain_slug: &str,
-// ) -> Result<GetConfigResponse, RoutesError> {
-//     let result = configs_service::get_config(db, app_slug, env_slug).await;
-//     return match result {
-//         Ok(config) => Ok(GetConfigResponse(Json(GetConfigDto {
-//             key: config.key,
-//             version: config.version,
-//             config_type: config.config_type.to_string(),
-//             created_at: config.created_at,
-//             updated_at: config.updated_at,
-//         }))),
-//         Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
-//     };
-// }
+#[get("/v1/configs/<domain_slug>/<key>")]
+pub async fn get_config(
+    db: Connection<ConfigMonkeyDb>,
+    domain_slug: &str,
+    key: &str,
+) -> Result<GetConfigResponse, RoutesError> {
+    let result = configs_service::get_config(db, domain_slug, key).await;
+    return match result {
+        Ok(config) => Ok(GetConfigResponse(Json(GetConfigDto {
+            key: config.key,
+            created_at: config.created_at,
+        }))),
+        Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
+    };
+}
 
-// #[derive(Responder)]
-// #[response(status = 204, content_type = "json")]
-// pub struct DeleteConfigSuccess(());
+#[derive(Responder)]
+#[response(status = 200, content_type = "json")]
+pub struct GetConfigsResponse(Json<PaginatedListDto<GetConfigDto>>);
 
-// #[delete("/v1/configs/<app_slug>/<env_slug>")]
-// pub async fn delete_config(
-//     db: Connection<ConfigMonkeyDb>,
-//     app_slug: &str,
-//     env_slug: &str,
-// ) -> Result<DeleteConfigSuccess, RoutesError> {
-//     let result = configs_service::delete_config(db, app_slug, env_slug).await;
+#[get("/v1/configs/<domain_slug>?<limit>&<offset>")]
+pub async fn get_configs(
+    db: Connection<ConfigMonkeyDb>,
+    domain_slug: &str,
+    limit: Option<i32>,
+    offset: Option<i32>,
+) -> Result<GetConfigsResponse, RoutesError> {
+    let result = configs_service::get_configs(db, domain_slug, limit, offset).await;
+    return match result {
+        Ok(configs) => {
+            let mut result = vec![];
+            for config in configs.items {
+                result.push(GetConfigDto {
+                    key: config.key,
+                    created_at: config.created_at,
+                })
+            }
+            Ok(GetConfigsResponse(Json(PaginatedListDto {
+                data: result,
+                pagination: PaginationDto {
+                    count: configs.count,
+                    offset: configs.offset,
+                    limit: configs.limit,
+                    next: if let Some(next_offset) = configs.next_offset {
+                        Some(format!(
+                            "/v1/domains?limit={}&offset={}",
+                            configs.limit, next_offset
+                        ))
+                    } else {
+                        None
+                    },
+                    prev: if let Some(prev_offset) = configs.prev_offset {
+                        Some(format!(
+                            "/v1/domains?limit={}&offset={}",
+                            configs.limit, prev_offset
+                        ))
+                    } else {
+                        None
+                    },
+                },
+            })))
+        }
+        Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
+    };
+}
 
-//     return match result {
-//         Ok(()) => Ok(DeleteConfigSuccess(())),
-//         Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
-//     };
-// }
+#[derive(Responder)]
+#[response(status = 204, content_type = "json")]
+pub struct DeleteConfigSuccess(());
+
+#[delete("/v1/configs/<domain_slug>/<key>")]
+pub async fn delete_config(
+    db: Connection<ConfigMonkeyDb>,
+    domain_slug: &str,
+    key: &str,
+) -> Result<DeleteConfigSuccess, RoutesError> {
+    let result = configs_service::delete_config(db, domain_slug, key).await;
+
+    return match result {
+        Ok(()) => Ok(DeleteConfigSuccess(())),
+        Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
+    };
+}
+
+// Versions
+
+#[derive(Responder)]
+#[response(status = 201, content_type = "json")]
+pub struct CreateVersionSuccess(Json<GetVersionDto>);
+
+#[post(
+    "/v1/configs/<domain_slug>/<key>/versions",
+    format = "application/json",
+    data = "<input>"
+)]
+pub async fn create_version(
+    db: Connection<ConfigMonkeyDb>,
+    domain_slug: &str,
+    key: &str,
+    input: Json<CreateVersionDto>,
+) -> Result<CreateVersionSuccess, RoutesError> {
+    let config_value = from_value(&input.value);
+
+    let result = configs_service::create_version(db, domain_slug, key, config_value).await;
+
+    match result {
+        Ok(version) => Ok(CreateVersionSuccess(Json(GetVersionDto {
+            id: version.version,
+            created_at: version.created_at,
+            value: to_value(version.value),
+        }))),
+        Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
+    }
+}
+
+#[derive(Responder)]
+#[response(status = 200, content_type = "json")]
+pub struct GetVersionsResponse(Json<PaginatedListDto<GetVersionDto>>);
+
+#[get("/v1/configs/<domain_slug>/<key>/versions?<limit>&<offset>")]
+pub async fn get_versions(
+    db: Connection<ConfigMonkeyDb>,
+    domain_slug: &str,
+    key: &str,
+    limit: Option<i32>,
+    offset: Option<i32>,
+) -> Result<GetVersionsResponse, RoutesError> {
+    let result = configs_service::get_versions(db, domain_slug, key, limit, offset).await;
+    return match result {
+        Ok(versions) => {
+            let mut result = vec![];
+            for version in versions.items {
+                result.push(GetVersionDto {
+                    id: version.version,
+                    value: to_value(version.value),
+                    created_at: version.created_at,
+                })
+            }
+            Ok(GetVersionsResponse(Json(PaginatedListDto {
+                data: result,
+                pagination: PaginationDto {
+                    count: versions.count,
+                    offset: versions.offset,
+                    limit: versions.limit,
+                    next: if let Some(next_offset) = versions.next_offset {
+                        Some(format!(
+                            "/v1/domains?limit={}&offset={}",
+                            versions.limit, next_offset
+                        ))
+                    } else {
+                        None
+                    },
+                    prev: if let Some(prev_offset) = versions.prev_offset {
+                        Some(format!(
+                            "/v1/domains?limit={}&offset={}",
+                            versions.limit, prev_offset
+                        ))
+                    } else {
+                        None
+                    },
+                },
+            })))
+        }
+        Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
+    };
+}
+

@@ -32,7 +32,7 @@ impl ConfigValue {
 #[derive(Debug)]
 pub struct ConfigVersion {
     pub id: String,
-    pub index: i32,
+    pub version: i32,
     pub value: ConfigValue,
     pub created_at: DateTime<Utc>,
 }
@@ -41,6 +41,5 @@ pub struct ConfigVersion {
 pub struct Config {
     pub id: String,
     pub key: String,
-    pub versions: Vec<ConfigVersion>,
     pub created_at: DateTime<Utc>,
 }

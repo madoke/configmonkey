@@ -14,6 +14,11 @@ pub fn rocket_from_config(figment: Figment) -> Rocket<Build> {
                 routes::v1::domains_routes::get_domains,
                 routes::v1::domains_routes::delete_domain,
                 routes::v1::configs_routes::create_config,
+                routes::v1::configs_routes::get_configs,
+                routes::v1::configs_routes::get_config,
+                routes::v1::configs_routes::delete_config,
+                routes::v1::configs_routes::create_version,
+                routes::v1::configs_routes::get_versions,
             ],
         )
         .register(

@@ -69,7 +69,6 @@ pub async fn get_domains(
     return match result {
         Ok(domains) => {
             let mut result = vec![];
-
             for domain in domains.items {
                 result.push(GetDomainDto {
                     slug: domain.slug,
