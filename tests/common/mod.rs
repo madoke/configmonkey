@@ -3,19 +3,12 @@ pub mod helpers {
     use configmonkey::{
         app::rocket_from_config,
         routes::v1::{
-            apps_routes::{
-                rocket_uri_macro_create_app, rocket_uri_macro_delete_app,
-                rocket_uri_macro_get_apps, GetAppsDto,
-            },
-            configs_routes::{
-                rocket_uri_macro_create_config, rocket_uri_macro_delete_config,
-                rocket_uri_macro_get_config, GetConfigDto,
-            },
+            configs_routes::rocket_uri_macro_create_config,
             domains_routes::{
-                rocket_uri_macro_create_env, rocket_uri_macro_delete_env,
-                rocket_uri_macro_get_envs, GetEnvDto, GetEnvsDto,
+                rocket_uri_macro_create_domain, rocket_uri_macro_delete_domain,
+                rocket_uri_macro_get_domains,
             },
-            dtos::ErrorMessageDto,
+            dtos::PaginationDto,
         },
     };
     use rocket::{
@@ -23,9 +16,12 @@ pub mod helpers {
             map,
             value::{Map, Value},
         },
-        http::{ContentType, Status},
+        http::ContentType,
         local::asynchronous::{Client, LocalResponse},
-        serde::json::serde_json::{from_str, json},
+        serde::{
+            json::{from_str, serde_json::json},
+            Deserialize,
+        },
         uri,
     };
     use sqlx::postgres::PgConnectOptions;
@@ -53,151 +49,113 @@ pub mod helpers {
         return client;
     }
 
-    /// Request to create a new app
-    pub async fn h_create_app<'a>(
-        client: &'a Client,
-        app_slug: &str,
-        app_name: &str,
-    ) -> LocalResponse<'a> {
+    /// Create a new domain
+    pub async fn h_create_domain<'a>(client: &'a Client, domain_slug: &str) -> LocalResponse<'a> {
         client
-            .post(uri!(create_app))
+            .post(uri!(create_domain))
             .header(ContentType::JSON)
-            .body(json!({"slug": app_slug, "name": app_name }).to_string())
+            .body(json!({"slug": domain_slug}).to_string())
             .dispatch()
             .await
     }
 
-    // Request to get all available apps
-    pub async fn h_get_apps<'a>(
+    /// Get all available domains
+    pub async fn h_get_domains<'a>(
         client: &'a Client,
-        limit: Option<i32>,
-        offset: Option<i32>,
-    ) -> GetAppsDto {
-        let response = client.get(uri!(get_apps(limit, offset))).dispatch().await;
-
-        // assert response
-        assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.content_type(), Some(ContentType::JSON));
-
-        let response_body = response.into_string().await.expect("Response Body");
-        let get_apps_dto: GetAppsDto =
-            from_str(&response_body.as_str()).expect("Valid Get Apps Response");
-        get_apps_dto
-    }
-
-    // Request to delete app
-    pub async fn h_delete_app<'a>(client: &'a Client, app_slug: &str) -> LocalResponse<'a> {
-        client.get(uri!(delete_app(app_slug))).dispatch().await
-    }
-
-    // Envs
-
-    /// Request to create a new env
-    pub async fn h_create_env<'a>(
-        client: &'a Client,
-        app_slug: &str,
-        env_slug: &str,
-        env_name: &str,
-    ) -> LocalResponse<'a> {
-        client
-            .post(uri!(create_env(app_slug)))
-            .header(ContentType::JSON)
-            .body(json!({"slug": env_slug, "name": env_name }).to_string())
-            .dispatch()
-            .await
-    }
-
-    // Request to get all available envs
-    pub async fn h_get_envs<'a>(
-        client: &'a Client,
-        app_slug: &str,
         limit: Option<i32>,
         offset: Option<i32>,
     ) -> LocalResponse<'a> {
         client
-            .get(uri!(get_envs(app_slug, limit, offset)))
+            .get(uri!(get_domains(limit, offset)))
             .dispatch()
             .await
     }
 
-    // Request to delete environment
-    pub async fn h_delete_env<'a>(
-        client: &'a Client,
-        app_slug: &str,
-        env_slug: &str,
-    ) -> LocalResponse<'a> {
+    /// Delete domain
+    pub async fn h_delete_domain<'a>(client: &'a Client, domain_slug: &str) -> LocalResponse<'a> {
         client
-            .delete(uri!(delete_env(app_slug, env_slug)))
+            .delete(uri!(delete_domain(domain_slug)))
             .dispatch()
             .await
     }
 
-    /// Parse get envs
-    pub async fn h_parse_get_envs<'a>(response: LocalResponse<'a>) -> GetEnvsDto {
-        let response_body = response.into_string().await.expect("Valid Response Body");
-        let get_envs_dto: GetEnvsDto =
-            from_str(&response_body.as_str()).expect("Valid Get Envs Dto");
-        get_envs_dto
-    }
-
-    /// Parse single env
-    pub async fn h_parse_get_env<'a>(response: LocalResponse<'a>) -> GetEnvDto {
-        let response_body = response.into_string().await.expect("Valid Response Body");
-        from_str(&response_body.as_str()).expect("Valid Env Dto")
-    }
-
-    // Configs
-
-    /// Request to create a new config
+    /// Create config
     pub async fn h_create_config<'a>(
         client: &'a Client,
-        app_slug: &str,
-        env_slug: &str,
-        config: &str,
+        domain_slug: &str,
+        key: &str,
     ) -> LocalResponse<'a> {
         client
-            .post(uri!(create_config(app_slug, env_slug)))
+            .post(uri!(create_config(domain_slug)))
             .header(ContentType::JSON)
-            .body(config)
+            .body(format!(r#"{{"key": "{}"}}"#, key))
             .dispatch()
             .await
     }
 
-    // Request to get config
-    pub async fn h_get_config<'a>(
-        client: &'a Client,
-        app_slug: &str,
-        env_slug: &str,
-    ) -> LocalResponse<'a> {
-        client
-            .get(uri!(get_config(app_slug, env_slug)))
-            .dispatch()
-            .await
+    /// Validate and extract http response body
+    pub async fn h_parse_response<'a>(response: LocalResponse<'a>) -> String {
+        response.into_string().await.expect("Valid Response Body")
     }
 
-    // Request to delete config
-    pub async fn h_delete_config<'a>(
-        client: &'a Client,
-        app_slug: &str,
-        env_slug: &str,
-    ) -> LocalResponse<'a> {
-        client
-            .delete(uri!(delete_config(app_slug, env_slug)))
-            .dispatch()
-            .await
+    /// Validate and parse a string into a DTO
+    pub fn h_parse_dto<'a, T: Deserialize<'a>>(response_body: &'a str) -> T {
+        from_str(response_body).expect("Valid DTO")
     }
 
-    /// Parse create config
-    pub async fn h_parse_get_config<'a>(response: LocalResponse<'a>) -> GetConfigDto {
-        let response_body = response.into_string().await.expect("Valid Response Body");
-        from_str(&response_body.as_str()).expect("Valid Config Dto")
+    /// Validate pagination
+    pub fn h_validate_pagination(
+        pagination: PaginationDto,
+        expected_count: i32,
+        expected_limit: i32,
+        expected_offset: i32,
+        expected_next: Option<String>,
+        expected_prev: Option<String>,
+    ) {
+        assert_eq!(pagination.count, expected_count);
+        assert_eq!(pagination.limit, expected_limit);
+        assert_eq!(pagination.offset, expected_offset);
+        assert_eq!(pagination.next, expected_next);
+        assert_eq!(pagination.prev, expected_prev);
     }
 
-    // Errors
+    //     // Configs
 
-    /// Parse error
-    pub async fn h_parse_error<'a>(response: LocalResponse<'a>) -> ErrorMessageDto {
-        let response_body = response.into_string().await.expect("Valid Response Body");
-        from_str(&response_body.as_str()).expect("Valid Error Message")
-    }
+    //     // Request to get config
+    //     pub async fn h_get_config<'a>(
+    //         client: &'a Client,
+    //         app_slug: &str,
+    //         env_slug: &str,
+    //     ) -> LocalResponse<'a> {
+    //         client
+    //             .get(uri!(get_config(app_slug, env_slug)))
+    //             .dispatch()
+    //             .await
+    //     }
+
+    //     // Request to delete config
+    //     pub async fn h_delete_config<'a>(
+    //         client: &'a Client,
+    //         app_slug: &str,
+    //         env_slug: &str,
+    //     ) -> LocalResponse<'a> {
+    //         client
+    //             .delete(uri!(delete_config(app_slug, env_slug)))
+    //             .dispatch()
+    //             .await
+    //     }
+
+    //     /// Parse create config
+    //     pub async fn h_parse_get_config<'a>(response: LocalResponse<'a>) -> GetConfigDto {
+    //         let response_body = response.into_string().await.expect("Valid Response Body");
+    //         from_str(&response_body.as_str()).expect("Valid Config Dto")
+    //     }
+
+    //     // Errors
+
+    //     /// Parse error
+    //     pub async fn h_parse_error<'a>(response: LocalResponse<'a>) -> ErrorMessageDto {
+    //         let response_body = response.into_string().await.expect("Valid Response Body");
+    //         from_str(&response_body.as_str()).expect("Valid Error Message")
+    //     }
 }
