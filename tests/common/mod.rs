@@ -4,15 +4,15 @@ pub mod helpers {
         app::rocket_from_config,
         routes::v1::{
             configs_routes::{
-                rocket_uri_macro_create_config, rocket_uri_macro_create_version,
-                rocket_uri_macro_delete_config, rocket_uri_macro_get_config,
-                rocket_uri_macro_get_configs, rocket_uri_macro_get_versions,
+                rocket_uri_macro_create_config, rocket_uri_macro_delete_config,
+                rocket_uri_macro_get_config, rocket_uri_macro_get_configs,
             },
             domains_routes::{
                 rocket_uri_macro_create_domain, rocket_uri_macro_delete_domain,
                 rocket_uri_macro_get_domains,
             },
             dtos::PaginationDto,
+            versions_routes::{rocket_uri_macro_create_version, rocket_uri_macro_get_versions},
         },
     };
     use rocket::{

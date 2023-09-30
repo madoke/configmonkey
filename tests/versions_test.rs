@@ -1,4 +1,7 @@
-use configmonkey::routes::v1::{configs_routes::GetVersionDto, dtos::{ErrorDto, PaginatedListDto}};
+use configmonkey::routes::v1::{
+    dtos::{ErrorDto, PaginatedListDto},
+    versions_routes::GetVersionDto,
+};
 use rocket::{
     http::{ContentType, Status},
     serde::json::json,
@@ -95,7 +98,6 @@ async fn create_version_err_config_not_found(
     Ok(())
 }
 
-
 #[sqlx::test]
 async fn get_versions_success(
     _: PgPoolOptions,
@@ -105,12 +107,24 @@ async fn get_versions_success(
 
     h_create_domain(&client, "configmonkey").await;
     h_create_config(&client, "configmonkey", "database_url").await;
-    h_create_version(&client, "configmonkey", "database_url", json!("postgres://localhost:1337")).await;
-    h_create_version(&client, "configmonkey", "database_url", json!("postgres://localhost:1338")).await;
+    h_create_version(
+        &client,
+        "configmonkey",
+        "database_url",
+        json!("postgres://localhost:1337"),
+    )
+    .await;
+    h_create_version(
+        &client,
+        "configmonkey",
+        "database_url",
+        json!("postgres://localhost:1338"),
+    )
+    .await;
 
     // get first page
     let response = h_get_versions(&client, "configmonkey", "database_url", Some(1), Some(0)).await;
-    
+
     let response_body = h_parse_response(response).await;
     let get_versions_dto: PaginatedListDto<GetVersionDto> = h_parse_dto(response_body.as_str());
 
@@ -122,7 +136,9 @@ async fn get_versions_success(
         1,
         1,
         0,
-        Some(String::from("/v1/configs/configmonkey/database_url/versions?limit=1&offset=1")),
+        Some(String::from(
+            "/v1/configs/configmonkey/database_url/versions?limit=1&offset=1",
+        )),
         None,
     );
 
@@ -140,13 +156,16 @@ async fn get_versions_success(
         1,
         1,
         1,
-        Some(String::from("/v1/configs/configmonkey/database_url/versions?limit=1&offset=2")),
-        Some(String::from("/v1/configs/configmonkey/database_url/versions?limit=1&offset=0")),
+        Some(String::from(
+            "/v1/configs/configmonkey/database_url/versions?limit=1&offset=2",
+        )),
+        Some(String::from(
+            "/v1/configs/configmonkey/database_url/versions?limit=1&offset=0",
+        )),
     );
 
     Ok(())
 }
-
 
 #[sqlx::test]
 async fn get_versions_err_domain_not_found(
@@ -166,9 +185,7 @@ async fn get_versions_err_domain_not_found(
     assert_eq!(error_dto.message, "Domain not found");
 
     Ok(())
-
 }
-
 
 #[sqlx::test]
 async fn get_versions_err_config_not_found(
@@ -190,6 +207,4 @@ async fn get_versions_err_config_not_found(
     assert_eq!(error_dto.message, "Config not found");
 
     Ok(())
-
 }
-
