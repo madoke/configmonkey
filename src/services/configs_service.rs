@@ -23,7 +23,7 @@ pub enum ConfigsServiceError {
 impl ConfigsServiceError {
     pub fn code(&self) -> &'static str {
         match *self {
-            ConfigsServiceError::AlreadyExists => "already_exists",
+            ConfigsServiceError::AlreadyExists => "config_already_exists",
             ConfigsServiceError::ConfigNotFound => "config_not_found",
             ConfigsServiceError::DomainNotFound => "domain_not_found",
             ConfigsServiceError::Unknown => "unknown_error",
@@ -100,7 +100,7 @@ pub async fn get_config(
     match result {
         Ok(config) => Ok(config),
         Err(configs_repo_err) => match configs_repo_err {
-            ConfigsRepoError::NotFound => Err(ConfigsServiceError::DomainNotFound),
+            ConfigsRepoError::NotFound => Err(ConfigsServiceError::ConfigNotFound),
             _ => Err(ConfigsServiceError::Unknown),
         },
     }

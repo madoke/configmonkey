@@ -7,7 +7,7 @@ create table domains (
     constraint domains_unique_slug unique(slug)
 );
 
-create type value_type as enum ('string', 'number', 'boolean');
+create type value_type as enum ('string', 'float', 'integer', 'boolean');
 
 create table configs (
     id uuid default uuid_generate_v4() primary key,
@@ -18,7 +18,7 @@ create table configs (
     constraint configs_unique_key unique(domain_id, key)
 );
 
-create table values (
+create table versions (
     id uuid default uuid_generate_v4() primary key,
     config_id uuid not null,
     type value_type not null,

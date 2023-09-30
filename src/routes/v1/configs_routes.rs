@@ -45,20 +45,33 @@ pub struct CreateVersionDto {
 
 fn to_http_status(error: &ConfigsServiceError) -> Status {
     match error {
+        ConfigsServiceError::AlreadyExists => Status::Conflict,
+        ConfigsServiceError::ConfigNotFound => Status::NotFound,
+        ConfigsServiceError::DomainNotFound => Status::NotFound,
         _ => Status::InternalServerError,
     }
 }
 
 fn to_value(config_value: ConfigValue) -> Value {
     match config_value {
-        ConfigValue::String(s) => json!(s),
-        ConfigValue::Boolean(b) => json!(b),
-        ConfigValue::Number(n) => json!(n),
+        ConfigValue::String(v) => json!(v),
+        ConfigValue::Boolean(v) => json!(v),
+        ConfigValue::Integer(v) => json!(v),
+        ConfigValue::Float(v) => json!(v),
     }
 }
 
 fn from_value(value: &Value) -> ConfigValue {
     match value {
+        Value::Number(v) => {
+            if v.is_f64() {
+                ConfigValue::Float(v.as_f64().unwrap())
+            } else if v.is_i64() {
+                ConfigValue::Integer(v.as_i64().unwrap() as i64)
+            } else {
+                ConfigValue::Integer(v.as_u64().unwrap() as i64)
+            }
+        }
         Value::String(v) => ConfigValue::String(v.to_string()),
         Value::Bool(v) => ConfigValue::Boolean(*v),
         _ => {
@@ -143,16 +156,16 @@ pub async fn get_configs(
                     limit: configs.limit,
                     next: if let Some(next_offset) = configs.next_offset {
                         Some(format!(
-                            "/v1/domains?limit={}&offset={}",
-                            configs.limit, next_offset
+                            "/v1/configs/{}?limit={}&offset={}",
+                            domain_slug, configs.limit, next_offset
                         ))
                     } else {
                         None
                     },
                     prev: if let Some(prev_offset) = configs.prev_offset {
                         Some(format!(
-                            "/v1/domains?limit={}&offset={}",
-                            configs.limit, prev_offset
+                            "/v1/configs/{}?limit={}&offset={}",
+                            domain_slug, configs.limit, prev_offset
                         ))
                     } else {
                         None
@@ -244,16 +257,16 @@ pub async fn get_versions(
                     limit: versions.limit,
                     next: if let Some(next_offset) = versions.next_offset {
                         Some(format!(
-                            "/v1/domains?limit={}&offset={}",
-                            versions.limit, next_offset
+                            "/v1/configs/{}/{}/versions?limit={}&offset={}",
+                            domain_slug, key, versions.limit, next_offset
                         ))
                     } else {
                         None
                     },
                     prev: if let Some(prev_offset) = versions.prev_offset {
                         Some(format!(
-                            "/v1/domains?limit={}&offset={}",
-                            versions.limit, prev_offset
+                            "/v1/configs/{}/{}/versions?limit={}&offset={}",
+                            domain_slug, key, versions.limit, prev_offset
                         ))
                     } else {
                         None
@@ -264,4 +277,3 @@ pub async fn get_versions(
         Err(err) => Err(RoutesError(to_http_status(&err), err.code(), err.message())),
     };
 }
-

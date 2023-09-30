@@ -3,7 +3,11 @@ pub mod helpers {
     use configmonkey::{
         app::rocket_from_config,
         routes::v1::{
-            configs_routes::rocket_uri_macro_create_config,
+            configs_routes::{
+                rocket_uri_macro_create_config, rocket_uri_macro_create_version,
+                rocket_uri_macro_delete_config, rocket_uri_macro_get_config,
+                rocket_uri_macro_get_configs, rocket_uri_macro_get_versions,
+            },
             domains_routes::{
                 rocket_uri_macro_create_domain, rocket_uri_macro_delete_domain,
                 rocket_uri_macro_get_domains,
@@ -93,6 +97,72 @@ pub mod helpers {
             .await
     }
 
+    /// Get all available configs on a specified domain
+    pub async fn h_get_configs<'a>(
+        client: &'a Client,
+        domain_slug: &str,
+        limit: Option<i32>,
+        offset: Option<i32>,
+    ) -> LocalResponse<'a> {
+        client
+            .get(uri!(get_configs(domain_slug, limit, offset)))
+            .dispatch()
+            .await
+    }
+
+    /// Get a specific config
+    pub async fn h_get_config<'a>(
+        client: &'a Client,
+        domain_slug: &str,
+        key: &str,
+    ) -> LocalResponse<'a> {
+        client
+            .get(uri!(get_config(domain_slug, key)))
+            .dispatch()
+            .await
+    }
+
+    /// Delete a specific config
+    pub async fn h_delete_config<'a>(
+        client: &'a Client,
+        domain_slug: &str,
+        key: &str,
+    ) -> LocalResponse<'a> {
+        client
+            .delete(uri!(delete_config(domain_slug, key)))
+            .dispatch()
+            .await
+    }
+
+    /// Create a config version
+    pub async fn h_create_version<'a>(
+        client: &'a Client,
+        domain_slug: &str,
+        key: &str,
+        value: rocket::serde::json::Value,
+    ) -> LocalResponse<'a> {
+        client
+            .post(uri!(create_version(domain_slug, key)))
+            .header(ContentType::JSON)
+            .body(format!(r#"{{"value": {}}}"#, value.to_string()))
+            .dispatch()
+            .await
+    }
+
+    /// Get the list of config versions
+    pub async fn h_get_versions<'a>(
+        client: &'a Client,
+        domain_slug: &str,
+        key: &str,
+        limit: Option<i32>,
+        offset: Option<i32>,
+    ) -> LocalResponse<'a> {
+        client
+            .get(uri!(get_versions(domain_slug, key, limit, offset)))
+            .dispatch()
+            .await
+    }
+
     /// Validate and extract http response body
     pub async fn h_parse_response<'a>(response: LocalResponse<'a>) -> String {
         response.into_string().await.expect("Valid Response Body")
@@ -118,44 +188,4 @@ pub mod helpers {
         assert_eq!(pagination.next, expected_next);
         assert_eq!(pagination.prev, expected_prev);
     }
-
-    //     // Configs
-
-    //     // Request to get config
-    //     pub async fn h_get_config<'a>(
-    //         client: &'a Client,
-    //         app_slug: &str,
-    //         env_slug: &str,
-    //     ) -> LocalResponse<'a> {
-    //         client
-    //             .get(uri!(get_config(app_slug, env_slug)))
-    //             .dispatch()
-    //             .await
-    //     }
-
-    //     // Request to delete config
-    //     pub async fn h_delete_config<'a>(
-    //         client: &'a Client,
-    //         app_slug: &str,
-    //         env_slug: &str,
-    //     ) -> LocalResponse<'a> {
-    //         client
-    //             .delete(uri!(delete_config(app_slug, env_slug)))
-    //             .dispatch()
-    //             .await
-    //     }
-
-    //     /// Parse create config
-    //     pub async fn h_parse_get_config<'a>(response: LocalResponse<'a>) -> GetConfigDto {
-    //         let response_body = response.into_string().await.expect("Valid Response Body");
-    //         from_str(&response_body.as_str()).expect("Valid Config Dto")
-    //     }
-
-    //     // Errors
-
-    //     /// Parse error
-    //     pub async fn h_parse_error<'a>(response: LocalResponse<'a>) -> ErrorMessageDto {
-    //         let response_body = response.into_string().await.expect("Valid Response Body");
-    //         from_str(&response_body.as_str()).expect("Valid Error Message")
-    //     }
 }

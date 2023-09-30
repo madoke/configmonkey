@@ -34,7 +34,8 @@ struct ValueEntity {
 enum ValueTypeEntity {
     String,
     Boolean,
-    Number,
+    Float,
+    Integer,
 }
 
 fn map_sqlx_error(error: Error) -> ConfigsRepoError {
@@ -53,7 +54,8 @@ fn to_value_type_entity(config_value: ConfigValue) -> ValueTypeEntity {
     match config_value {
         ConfigValue::Boolean(_) => ValueTypeEntity::Boolean,
         ConfigValue::String(_) => ValueTypeEntity::String,
-        ConfigValue::Number(_) => ValueTypeEntity::Number,
+        ConfigValue::Float(_) => ValueTypeEntity::Float,
+        ConfigValue::Integer(_) => ValueTypeEntity::Integer,
     }
 }
 
@@ -61,7 +63,8 @@ fn to_config_value(value_type: ValueTypeEntity, value: String) -> ConfigValue {
     match value_type {
         ValueTypeEntity::String => ConfigValue::String(value),
         ValueTypeEntity::Boolean => ConfigValue::Boolean(value.parse::<bool>().unwrap()),
-        ValueTypeEntity::Number => ConfigValue::Number(value.parse::<f64>().unwrap()),
+        ValueTypeEntity::Float => ConfigValue::Float(value.parse::<f64>().unwrap()),
+        ValueTypeEntity::Integer => ConfigValue::Integer(value.parse::<i64>().unwrap()),
     }
 }
 
@@ -185,8 +188,8 @@ pub async fn create_version(
     config_value: ConfigValue,
 ) -> Result<ConfigVersion, ConfigsRepoError> {
     let create_version_result =  sqlx::query_as::<_, ValueEntity>(
-              "with latest_version as (select version from values where config_id = $1::uuid order by version desc limit 1) \
-              insert into values(config_id, value, type, version) \
+              "with latest_version as (select version from versions where config_id = $1::uuid order by version desc limit 1) \
+              insert into versions(config_id, value, type, version) \
               values($1::uuid, $2, $3::value_type, coalesce((select version from latest_version), 0) + 1) \
               returning id, value, type, version, created_at",
             )
@@ -217,7 +220,7 @@ pub async fn get_versions(
     offset: i32,
 ) -> Result<Vec<ConfigVersion>, ConfigsRepoError> {
     let get_versions_result = sqlx::query_as::<_, ValueEntity>(
-        "select id, value, type, version, created_at from values where config_id = $1::uuid order by version desc limit $2 offset $3",
+        "select id, value, type, version, created_at from versions where config_id = $1::uuid order by version desc limit $2 offset $3",
     )
     .bind(config_id)
     .bind(limit)

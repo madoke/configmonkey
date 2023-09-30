@@ -1,305 +1,257 @@
-// use rocket::{
-//     http::{ContentType, Status},
-//     serde::json::serde_json::json,
-// };
-// use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+use configmonkey::routes::v1::{
+    configs_routes::GetConfigDto,
+    dtos::{ErrorDto, PaginatedListDto},
+};
+use rocket::http::{ContentType, Status};
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 
-// mod common;
+mod common;
 
-// pub use common::helpers::*;
+pub use common::helpers::*;
 
-// // test cases
+#[sqlx::test]
+async fn create_config_success(
+    _: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
 
-// #[sqlx::test]
-// async fn create_config_success(
-//     _pg_pool_options: PgPoolOptions,
-//     pg_connect_options: PgConnectOptions,
-// ) -> sqlx::Result<()> {
-//     let client = async_client_from_pg_connect_options(pg_connect_options).await;
+    h_create_domain(&client, "configmonkey").await;
 
-//     // create app and env
-//     h_create_app(&client, "configmonkey", "Config Monkey").await;
-//     h_create_env(&client, "configmonkey", "staging", "Staging").await;
+    let response = h_create_config(&client, "configmonkey", "database_url").await;
 
-//     // create config
-//     let response = h_create_config(
-//         &client,
-//         "configmonkey",
-//         "staging",
-//         json!({"key":"value"}).to_string().as_str(),
-//     )
-//     .await;
+    assert_eq!(response.status(), Status::Created);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
 
-//     // assert response
-//     assert_eq!(response.status(), Status::Created);
-//     assert_eq!(response.content_type(), Some(ContentType::JSON));
+    let response_body = h_parse_response(response).await;
+    let get_config_dto: GetConfigDto = h_parse_dto(response_body.as_str());
+    assert_eq!(get_config_dto.key, "database_url");
 
-//     // assert body
-//     let get_config_dto = h_parse_get_config(response).await;
-//     assert_eq!(get_config_dto.config, json!({"key":"value"}));
+    Ok(())
+}
 
-//     Ok(())
-// }
+#[sqlx::test]
+async fn create_config_err_exists(
+    _pg_pool_options: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
 
-// #[sqlx::test]
-// async fn create_config_err_exists(
-//     _pg_pool_options: PgPoolOptions,
-//     pg_connect_options: PgConnectOptions,
-// ) -> sqlx::Result<()> {
-//     let client = async_client_from_pg_connect_options(pg_connect_options).await;
+    h_create_domain(&client, "configmonkey").await;
+    h_create_config(&client, "configmonkey", "database_url").await;
 
-//     // create app, env and config
-//     h_create_app(&client, "configmonkey", "Config Monkey").await;
-//     h_create_env(&client, "configmonkey", "staging", "Staging").await;
-//     h_create_config(
-//         &client,
-//         "configmonkey",
-//         "staging",
-//         json!({"key":"value"}).to_string().as_str(),
-//     )
-//     .await;
+    let response = h_create_config(&client, "configmonkey", "database_url").await;
 
-//     // create another config
-//     let response = h_create_config(
-//         &client,
-//         "configmonkey",
-//         "staging",
-//         json!({"key":"value"}).to_string().as_str(),
-//     )
-//     .await;
+    assert_eq!(response.status(), Status::Conflict);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
 
-//     // assert response
-//     assert_eq!(response.status(), Status::Conflict);
-//     assert_eq!(response.content_type(), Some(ContentType::JSON));
+    let response_body = h_parse_response(response).await;
+    let error_dto: ErrorDto = h_parse_dto(response_body.as_str());
+    assert_eq!(error_dto.code, "config_already_exists");
+    assert_eq!(error_dto.message, "Config already exists");
 
-//     // assert body
-//     let error_message_dto = h_parse_error(response).await;
-//     assert_eq!(error_message_dto.code, "config_already_exists");
-//     assert_eq!(error_message_dto.message, "Config already exists");
+    Ok(())
+}
 
-//     Ok(())
-// }
+#[sqlx::test]
+async fn create_config_err_domain_not_found(
+    _pg_pool_options: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
 
-// #[sqlx::test]
-// async fn create_config_err_not_found(
-//     _pg_pool_options: PgPoolOptions,
-//     pg_connect_options: PgConnectOptions,
-// ) -> sqlx::Result<()> {
-//     let client = async_client_from_pg_connect_options(pg_connect_options).await;
+    let response = h_create_config(&client, "configmonkey", "database_url").await;
 
-//     // create config
-//     let response = h_create_config(
-//         &client,
-//         "configmonkey",
-//         "staging",
-//         json!({"key":"value"}).to_string().as_str(),
-//     )
-//     .await;
+    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
 
-//     // assert response
-//     assert_eq!(response.status(), Status::NotFound);
-//     assert_eq!(response.content_type(), Some(ContentType::JSON));
+    let response_body = h_parse_response(response).await;
+    let error_dto: ErrorDto = h_parse_dto(response_body.as_str());
+    assert_eq!(error_dto.code, "domain_not_found");
+    assert_eq!(error_dto.message, "Domain not found");
 
-//     // assert body
-//     let error_message_dto = h_parse_error(response).await;
-//     assert_eq!(error_message_dto.code, "resource_not_found");
-//     assert_eq!(error_message_dto.message, "Resource not found");
+    Ok(())
+}
 
-//     Ok(())
-// }
+#[sqlx::test]
+async fn get_configs_success(
+    _: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
 
-// #[sqlx::test]
-// async fn create_config_err_malformed(
-//     _pg_pool_options: PgPoolOptions,
-//     pg_connect_options: PgConnectOptions,
-// ) -> sqlx::Result<()> {
-//     let client = async_client_from_pg_connect_options(pg_connect_options).await;
+    h_create_domain(&client, "configmonkey").await;
+    h_create_config(&client, "configmonkey", "database_url").await;
+    h_create_config(&client, "configmonkey", "database_port").await;
 
-//     // create app and env
-//     h_create_app(&client, "configmonkey", "Config Monkey").await;
-//     h_create_env(&client, "configmonkey", "staging", "Staging").await;
+    // get first page
+    let response = h_get_configs(&client, "configmonkey", Some(1), Some(0)).await;
+    let response_body = h_parse_response(response).await;
+    let get_configs_dto: PaginatedListDto<GetConfigDto> = h_parse_dto(response_body.as_str());
 
-//     // create config
-//     let response = h_create_config(&client, "configmonkey", "staging", "{\"syntax':error}}").await;
+    assert_eq!(get_configs_dto.data.len(), 1);
+    assert_eq!(get_configs_dto.data[0].key, "database_port");
 
-//     // assert response
-//     assert_eq!(response.status(), Status::BadRequest);
-//     assert_eq!(response.content_type(), Some(ContentType::JSON));
+    h_validate_pagination(
+        get_configs_dto.pagination,
+        1,
+        1,
+        0,
+        Some(String::from("/v1/configs/configmonkey?limit=1&offset=1")),
+        None,
+    );
 
-//     // assert body
-//     let error_message_dto = h_parse_error(response).await;
-//     assert_eq!(error_message_dto.code, "invalid_config_format");
-//     assert_eq!(
-//         error_message_dto.message,
-//         "Invalid config format. Check the payload"
-//     );
+    // get second page
+    let response = h_get_configs(&client, "configmonkey", Some(1), Some(1)).await;
+    let response_body = h_parse_response(response).await;
+    let get_configs_dto: PaginatedListDto<GetConfigDto> = h_parse_dto(response_body.as_str());
 
-//     Ok(())
-// }
+    assert_eq!(get_configs_dto.data.len(), 1);
+    assert_eq!(get_configs_dto.data[0].key, "database_url");
 
-// #[sqlx::test]
-// async fn get_config_success(
-//     _pg_pool_options: PgPoolOptions,
-//     pg_connect_options: PgConnectOptions,
-// ) -> sqlx::Result<()> {
-//     let client = async_client_from_pg_connect_options(pg_connect_options).await;
+    h_validate_pagination(
+        get_configs_dto.pagination,
+        1,
+        1,
+        1,
+        Some(String::from("/v1/configs/configmonkey?limit=1&offset=2")),
+        Some(String::from("/v1/configs/configmonkey?limit=1&offset=0")),
+    );
 
-//     // create app, env and config
-//     h_create_app(&client, "configmonkey", "Config Monkey").await;
-//     h_create_env(&client, "configmonkey", "staging", "Staging").await;
-//     h_create_config(
-//         &client,
-//         "configmonkey",
-//         "staging",
-//         json!({"key":"value"}).to_string().as_str(),
-//     )
-//     .await;
+    Ok(())
+}
 
-//     // get config
-//     let response = h_get_config(&client, "configmonkey", "staging").await;
+#[sqlx::test]
+async fn get_config_success(
+    _: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
 
-//     // assert response
-//     assert_eq!(response.status(), Status::Ok);
-//     assert_eq!(response.content_type(), Some(ContentType::JSON));
+    h_create_domain(&client, "configmonkey").await;
+    h_create_config(&client, "configmonkey", "database_url").await;
 
-//     // assert body
-//     let get_config_dto = h_parse_get_config(response).await;
-//     assert_eq!(get_config_dto.config, json!({"key":"value"}));
+    let response = h_get_config(&client, "configmonkey", "database_url").await;
 
-//     Ok(())
-// }
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
 
-// #[sqlx::test]
-// async fn get_config_err_not_exists(
-//     _pg_pool_options: PgPoolOptions,
-//     pg_connect_options: PgConnectOptions,
-// ) -> sqlx::Result<()> {
-//     let client = async_client_from_pg_connect_options(pg_connect_options).await;
+    let response_body = h_parse_response(response).await;
+    let get_config_dto: GetConfigDto = h_parse_dto(response_body.as_str());
+    assert_eq!(get_config_dto.key, "database_url");
 
-//     // create app, env and config
-//     h_create_app(&client, "configmonkey", "Config Monkey").await;
-//     h_create_env(&client, "configmonkey", "staging", "Staging").await;
+    Ok(())
+}
 
-//     // get config
-//     let response = h_get_config(&client, "configmonkey", "staging").await;
+#[sqlx::test]
+async fn get_config_err_domain_not_found(
+    _: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
 
-//     // assert response
-//     assert_eq!(response.status(), Status::NotFound);
-//     assert_eq!(response.content_type(), Some(ContentType::JSON));
+    let response = h_get_config(&client, "configmonkey", "database_url").await;
 
-//     // assert body
-//     let error_message_dto = h_parse_error(response).await;
-//     assert_eq!(error_message_dto.code, "resource_not_found");
-//     assert_eq!(error_message_dto.message, "Resource not found");
+    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
 
-//     Ok(())
-// }
+    let response_body = h_parse_response(response).await;
+    let error_dto: ErrorDto = h_parse_dto(response_body.as_str());
+    assert_eq!(error_dto.code, "domain_not_found");
+    assert_eq!(error_dto.message, "Domain not found");
 
-// #[sqlx::test]
-// async fn get_config_err_app_env_not_exists(
-//     _pg_pool_options: PgPoolOptions,
-//     pg_connect_options: PgConnectOptions,
-// ) -> sqlx::Result<()> {
-//     let client = async_client_from_pg_connect_options(pg_connect_options).await;
+    Ok(())
+}
 
-//     // get config
-//     let response = h_get_config(&client, "configmonkey", "staging").await;
+#[sqlx::test]
+async fn get_config_err_not_found(
+    _: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
 
-//     // assert response
-//     assert_eq!(response.status(), Status::NotFound);
-//     assert_eq!(response.content_type(), Some(ContentType::JSON));
+    h_create_domain(&client, "configmonkey").await;
 
-//     // assert body
-//     let error_message_dto = h_parse_error(response).await;
-//     assert_eq!(error_message_dto.code, "resource_not_found");
-//     assert_eq!(error_message_dto.message, "Resource not found");
+    let response = h_get_config(&client, "configmonkey", "database_url").await;
 
-//     Ok(())
-// }
+    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
 
-// #[sqlx::test]
-// async fn delete_config_success(
-//     _pg_pool_options: PgPoolOptions,
-//     pg_connect_options: PgConnectOptions,
-// ) -> sqlx::Result<()> {
-//     let client = async_client_from_pg_connect_options(pg_connect_options).await;
+    let response_body = h_parse_response(response).await;
+    let error_dto: ErrorDto = h_parse_dto(response_body.as_str());
+    assert_eq!(error_dto.code, "config_not_found");
+    assert_eq!(error_dto.message, "Config not found");
 
-//     // create app, env and config
-//     h_create_app(&client, "configmonkey", "Config Monkey").await;
-//     h_create_env(&client, "configmonkey", "staging", "Staging").await;
-//     h_create_config(
-//         &client,
-//         "configmonkey",
-//         "staging",
-//         json!({"key":"value"}).to_string().as_str(),
-//     )
-//     .await;
+    Ok(())
+}
 
-//     // delete config
-//     let response = h_delete_config(&client, "configmonkey", "staging").await;
+#[sqlx::test]
+async fn delete_config_success(
+    _: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
 
-//     // assert response
-//     assert_eq!(response.status(), Status::NoContent);
+    h_create_domain(&client, "configmonkey").await;
+    h_create_config(&client, "configmonkey", "database_url").await;
 
-//     // get config
-//     let response = h_get_config(&client, "configmonkey", "staging").await;
+    let response = h_get_config(&client, "configmonkey", "database_url").await;
 
-//     // assert response
-//     assert_eq!(response.status(), Status::NotFound);
-//     assert_eq!(response.content_type(), Some(ContentType::JSON));
+    // assert exists
+    assert_eq!(response.status(), Status::Ok);
 
-//     // assert body
-//     let error_message_dto = h_parse_error(response).await;
-//     assert_eq!(error_message_dto.code, "resource_not_found");
-//     assert_eq!(error_message_dto.message, "Resource not found");
+    // delete config
+    let response = h_delete_config(&client, "configmonkey", "database_url").await;
 
-//     Ok(())
-// }
+    // assert response
+    assert_eq!(response.status(), Status::NoContent);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
 
-// #[sqlx::test]
-// async fn delete_config_err_not_exists(
-//     _pg_pool_options: PgPoolOptions,
-//     pg_connect_options: PgConnectOptions,
-// ) -> sqlx::Result<()> {
-//     let client = async_client_from_pg_connect_options(pg_connect_options).await;
+    // assert not exists
+    let response = h_get_config(&client, "configmonkey", "database_url").await;
 
-//     // create app and env
-//     h_create_app(&client, "configmonkey", "Config Monkey").await;
-//     h_create_env(&client, "configmonkey", "staging", "Staging").await;
+    assert_eq!(response.status(), Status::NotFound);
 
-//     // delete config
-//     let response = h_delete_config(&client, "configmonkey", "staging").await;
+    Ok(())
+}
 
-//     // assert response
-//     assert_eq!(response.status(), Status::NotFound);
-//     assert_eq!(response.content_type(), Some(ContentType::JSON));
+#[sqlx::test]
+async fn delete_config_err_domain_not_found(
+    _: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
 
-//     // assert body
-//     let error_message_dto = h_parse_error(response).await;
-//     assert_eq!(error_message_dto.code, "resource_not_found");
-//     assert_eq!(error_message_dto.message, "Resource not found");
+    let response = h_delete_config(&client, "configmonkey", "database_url").await;
 
-//     Ok(())
-// }
+    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
 
-// #[sqlx::test]
-// async fn delete_config_err_app_env_not_exists(
-//     _pg_pool_options: PgPoolOptions,
-//     pg_connect_options: PgConnectOptions,
-// ) -> sqlx::Result<()> {
-//     let client = async_client_from_pg_connect_options(pg_connect_options).await;
+    let response_body = h_parse_response(response).await;
+    let error_dto: ErrorDto = h_parse_dto(response_body.as_str());
+    assert_eq!(error_dto.code, "domain_not_found");
+    assert_eq!(error_dto.message, "Domain not found");
 
-//     // delete config
-//     let response = h_delete_config(&client, "configmonkey", "staging").await;
+    Ok(())
+}
 
-//     // assert response
-//     assert_eq!(response.status(), Status::NotFound);
-//     assert_eq!(response.content_type(), Some(ContentType::JSON));
+#[sqlx::test]
+async fn delete_config_err_not_found(
+    _: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
+    h_create_domain(&client, "configmonkey").await;
 
-//     // assert body
-//     let error_message_dto = h_parse_error(response).await;
-//     assert_eq!(error_message_dto.code, "resource_not_found");
-//     assert_eq!(error_message_dto.message, "Resource not found");
+    let response = h_delete_config(&client, "configmonkey", "database_url").await;
 
-//     Ok(())
-// }
+    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let response_body = h_parse_response(response).await;
+    let error_dto: ErrorDto = h_parse_dto(response_body.as_str());
+    assert_eq!(error_dto.code, "config_not_found");
+    assert_eq!(error_dto.message, "Config not found");
+
+    Ok(())
+}

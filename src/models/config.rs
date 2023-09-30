@@ -6,7 +6,8 @@ use chrono::{DateTime, Utc};
 pub enum ConfigValue {
     String(String),
     Boolean(bool),
-    Number(f64),
+    Float(f64),
+    Integer(i64),
 }
 
 impl Display for ConfigValue {
@@ -14,17 +15,8 @@ impl Display for ConfigValue {
         match self {
             ConfigValue::String(s) => write!(f, "{}", s),
             ConfigValue::Boolean(b) => write!(f, "{}", b),
-            ConfigValue::Number(n) => write!(f, "{}", n),
-        }
-    }
-}
-
-impl ConfigValue {
-    pub fn r#type(&self) -> &str {
-        match self {
-            ConfigValue::String(_) => "string",
-            ConfigValue::Boolean(_) => "boolean",
-            ConfigValue::Number(_) => "number",
+            ConfigValue::Float(n) => write!(f, "{}", n),
+            ConfigValue::Integer(n) => write!(f, "{}", n),
         }
     }
 }
