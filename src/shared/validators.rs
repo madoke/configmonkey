@@ -3,7 +3,7 @@ use regex::Regex;
 
 pub fn validate_slug(slug: &str) -> bool {
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"^[a-z0-9\-]+$").unwrap();
+        static ref RE: Regex = Regex::new(r"^[a-zA-Z0-9\-\_]+$").unwrap();
     }
     RE.is_match(slug)
 }

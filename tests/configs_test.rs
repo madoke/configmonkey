@@ -54,6 +54,36 @@ async fn create_config_err_exists(
 }
 
 #[sqlx::test]
+async fn create_config_err_invalid_slug(
+    _pg_pool_options: PgPoolOptions,
+    pg_connect_options: PgConnectOptions,
+) -> sqlx::Result<()> {
+    let client = async_client_from_pg_connect_options(pg_connect_options).await;
+
+    h_create_domain(&client, "configmonkey").await;
+
+    let bad_slugs = vec![
+        "Database URL",
+        "%DATABASE_URL%",
+        "${DB_URL}",
+    ];
+
+    for bad_slug in bad_slugs.iter() {
+        let response = h_create_config(&client, "configmonkey", bad_slug).await;
+
+        assert_eq!(response.status(), Status::BadRequest);
+        assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+        let response_body = h_parse_response(response).await;
+        let error_dto: ErrorDto = h_parse_dto(response_body.as_str());
+        assert_eq!(error_dto.code, "invalid_slug");
+        assert_eq!(error_dto.message, "The slug contains invalid characters. Only letters, numbers, dash (-) and underscore (_) are allowed");
+    }
+
+    Ok(())
+}
+
+#[sqlx::test]
 async fn create_config_err_domain_not_found(
     _pg_pool_options: PgPoolOptions,
     pg_connect_options: PgConnectOptions,

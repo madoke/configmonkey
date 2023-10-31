@@ -4,7 +4,7 @@ use crate::{
     repos::{
         configs_repo::{self, ConfigsRepoError},
         domains_repo::{self, DomainsRepoError},
-    },
+    }, shared::validators::validate_slug,
 };
 
 use rocket::error;
@@ -15,12 +15,14 @@ pub enum ConfigsServiceError {
     DomainNotFound,
     ConfigNotFound,
     AlreadyExists,
+    InvalidSlug,
 }
 
 impl ConfigsServiceError {
     pub fn code(&self) -> &'static str {
         match *self {
             ConfigsServiceError::AlreadyExists => "config_already_exists",
+            ConfigsServiceError::InvalidSlug => "invalid_slug",
             ConfigsServiceError::ConfigNotFound => "config_not_found",
             ConfigsServiceError::DomainNotFound => "domain_not_found",
             ConfigsServiceError::Unknown => "unknown_error",
@@ -29,6 +31,7 @@ impl ConfigsServiceError {
     pub fn message(&self) -> &'static str {
         match *self {
             ConfigsServiceError::AlreadyExists => "Config already exists",
+            ConfigsServiceError::InvalidSlug => "The slug contains invalid characters. Only letters, numbers, dash (-) and underscore (_) are allowed",
             ConfigsServiceError::ConfigNotFound => "Config not found",
             ConfigsServiceError::DomainNotFound => "Domain not found",
             ConfigsServiceError::Unknown => "Unknown error",
@@ -44,6 +47,12 @@ pub async fn create_config(
     domain_slug: &str,
     key: &str,
 ) -> Result<Config, ConfigsServiceError> {
+
+    let is_valid_slug = validate_slug(key);
+    if !is_valid_slug {
+        return Err(ConfigsServiceError::InvalidSlug);
+    }
+
     // Get domain
     let domain_result = domains_repo::get_domain_by_slug(&mut *db, domain_slug).await;
     if let Err(get_domain_error) = domain_result {

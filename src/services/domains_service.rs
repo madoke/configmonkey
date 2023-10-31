@@ -27,7 +27,7 @@ impl DomainsServiceError {
     pub fn message(&self) -> &'static str {
         match *self {
             DomainsServiceError::DuplicateSlug => "A domain with the same slug already exists",
-            DomainsServiceError::InvalidSlug => "The slug contains invalid characters. Only lowercase letters, numbers and dash (-) are allowed",
+            DomainsServiceError::InvalidSlug => "The slug contains invalid characters. Only letters, numbers, dash (-) and underscore (_) are allowed",
             DomainsServiceError::NotEmpty => "The domain could not be deleted because there are existing configs",
             DomainsServiceError::NotFound => "Domain not found",
             DomainsServiceError::Unknown => "Unknown error",

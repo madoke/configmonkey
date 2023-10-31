@@ -31,6 +31,7 @@ fn to_http_status(error: &ConfigsServiceError) -> Status {
         ConfigsServiceError::AlreadyExists => Status::Conflict,
         ConfigsServiceError::ConfigNotFound => Status::NotFound,
         ConfigsServiceError::DomainNotFound => Status::NotFound,
+        ConfigsServiceError::InvalidSlug => Status::BadRequest,
         _ => Status::InternalServerError,
     }
 }

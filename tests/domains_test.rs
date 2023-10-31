@@ -106,9 +106,9 @@ async fn create_domain_err_invalid_slug(
     let client = async_client_from_pg_connect_options(pg_connect_options).await;
 
     let bad_slugs = vec![
-        "CoNfIgMoNkEy",
+        "Config Monkey",
         "!@#$%^&*(){}[]:;,configmonkey",
-        "config monkey",
+        "config/monkey",
     ];
 
     for bad_slug in bad_slugs.iter() {
@@ -120,7 +120,7 @@ async fn create_domain_err_invalid_slug(
         let response_body = h_parse_response(response).await;
         let error_dto: ErrorDto = h_parse_dto(response_body.as_str());
         assert_eq!(error_dto.code, "invalid_slug");
-        assert_eq!(error_dto.message, "The slug contains invalid characters. Only lowercase letters, numbers and dash (-) are allowed");
+        assert_eq!(error_dto.message, "The slug contains invalid characters. Only letters, numbers, dash (-) and underscore (_) are allowed");
     }
 
     Ok(())
