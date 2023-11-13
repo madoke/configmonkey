@@ -1,156 +1,144 @@
 use std::borrow::Cow;
 
-use crate::{db::db::ConfigMonkeyDb, models::config::Config};
+use crate::models::config::Config;
 use chrono::{DateTime, Utc};
-use rocket::{
-    error,
-    log::private::debug,
-    serde::json::{
-        serde_json::{self, Map, Value},
-        to_string,
-    },
-};
-use rocket_db_pools::{
-    sqlx::{self, types::Uuid},
-    Connection,
-};
-use sqlx::{types::Json, Error};
+use rocket::error;
+use rocket_db_pools::sqlx::{self};
+use sqlx::{pool::PoolConnection, types::Uuid, Error, Postgres};
 
+#[derive(Debug)]
 pub enum ConfigsRepoError {
+    AlreadyExists,
+    NotFound,
     Unknown,
-    AppOrEnvNotFound,
-    ConfigAlreadyExists,
-    InvalidConfigJson,
+}
+
+#[derive(sqlx::FromRow, Debug)]
+struct ConfigEntity {
+    pub id: Uuid,
+    pub key: String,
+    pub created_at: DateTime<Utc>,
 }
 
 fn map_sqlx_error(error: Error) -> ConfigsRepoError {
     match error {
         Error::Database(err) => match err.code() {
             // Postgres code for unique_violation: https://www.postgresql.org/docs/current/errcodes-appendix.html
-            Some(Cow::Borrowed("23505")) => ConfigsRepoError::ConfigAlreadyExists,
+            Some(Cow::Borrowed("23505")) => ConfigsRepoError::AlreadyExists,
             _ => ConfigsRepoError::Unknown,
         },
-        Error::RowNotFound => ConfigsRepoError::AppOrEnvNotFound,
-        Error::ColumnDecode {
-            index: _,
-            source: _,
-        } => ConfigsRepoError::InvalidConfigJson,
+        Error::RowNotFound => ConfigsRepoError::NotFound,
         _ => ConfigsRepoError::Unknown,
     }
 }
 
-#[derive(sqlx::FromRow, Debug)]
-struct ConfigEntity {
-    pub id: Uuid,
-    pub config: Json<Map<String, Value>>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-pub async fn get_config(
-    mut db: Connection<ConfigMonkeyDb>,
-    app_slug: &str,
-    env_slug: &str,
+pub async fn create_config(
+    db: &mut PoolConnection<Postgres>,
+    domain_id: &str,
+    key: &str,
 ) -> Result<Config, ConfigsRepoError> {
-    let result = sqlx::query_as::<_, ConfigEntity>(
-        "select c.id, c.config, c.created_at, c.updated_at from configs c \
-        join envs e on e.id = c.env_id \
-        join apps a on a.id = e.app_id \
-        where a.slug = $1 and e.slug = $2",
+    let create_config_result = sqlx::query_as::<_, ConfigEntity>(
+        "insert into configs(domain_id, key) \
+                        values($1::uuid, $2) \
+                        returning id, key, created_at",
     )
-    .bind(app_slug)
-    .bind(env_slug)
+    .bind(domain_id)
+    .bind(key)
     .fetch_one(&mut *db)
     .await;
 
-    match result {
-        Ok(config) => {
-            debug!("Successfully retrieved config: {:?}", config);
-            Ok(Config {
-                id: config.id.to_string(),
-                config: to_string(&config.config).unwrap(),
-                created_at: config.created_at,
-                updated_at: config.updated_at,
-            })
+    match create_config_result {
+        Err(err) => {
+            error!("[create_config] Error creating config: {:?}", err);
+            Err(map_sqlx_error(err))
+        }
+        Ok(config) => Ok(Config {
+            id: config.id.to_string(),
+            key: config.key,
+            created_at: config.created_at,
+        }),
+    }
+}
+
+pub async fn get_configs(
+    db: &mut PoolConnection<Postgres>,
+    domain_id: &str,
+    limit: i32,
+    offset: i32,
+) -> Result<Vec<Config>, ConfigsRepoError> {
+    let get_configs_result = sqlx::query_as::<_, ConfigEntity>(
+        "select id, key, created_at from configs where domain_id = $1::uuid limit $2 offset $3",
+    )
+    .bind(domain_id)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&mut *db)
+    .await;
+
+    match get_configs_result {
+        Ok(configs) => {
+            let mut result = vec![];
+            for config in configs {
+                result.push(Config {
+                    id: config.id.to_string(),
+                    key: config.key,
+                    created_at: config.created_at,
+                })
+            }
+            Ok(result)
         }
         Err(err) => {
-            error!("Error retrieving config. Error: {:?}", err);
+            error!("[get_configs] Error retrieving configs: {:?}", err);
             Err(map_sqlx_error(err))
         }
     }
 }
 
-pub async fn create_config(
-    mut db: Connection<ConfigMonkeyDb>,
-    app_slug: &str,
-    env_slug: &str,
-    config: serde_json::Value,
+pub async fn get_config(
+    db: &mut PoolConnection<Postgres>,
+    domain_id: &str,
+    key: &str,
 ) -> Result<Config, ConfigsRepoError> {
-    print!("{}", config);
-    let result = sqlx::query_as::<_, ConfigEntity>(
-        "with get_env_id as (select e.id from envs e join apps a on a.id = e.app_id where a.slug = $1 and e.slug = $2) \
-        insert into configs(env_id, config) \
-        (select id, $3 from get_env_id) \
-        returning id, config, created_at, updated_at",
+    let get_config_result = sqlx::query_as::<_, ConfigEntity>(
+        "select id, key, created_at from configs where domain_id = $1::uuid and key = $2",
     )
-    .bind(app_slug)
-    .bind(env_slug)
-    .bind(config)
+    .bind(domain_id)
+    .bind(key)
     .fetch_one(&mut *db)
     .await;
 
-    match result {
-        Ok(entity) => {
-            debug!("Successfully created config: {:?}", entity);
-            Ok(Config {
-                id: entity.id.to_string(),
-                config: to_string(&entity.config).unwrap(),
-                created_at: entity.created_at,
-                updated_at: entity.updated_at,
-            })
-        }
+    match get_config_result {
+        Ok(config) => Ok(Config {
+            id: config.id.to_string(),
+            key: config.key,
+            created_at: config.created_at,
+        }),
         Err(err) => {
-            error!("Error creating config. Error: {:?}", err);
+            error!("[get_donfig] Error retrieving config: {:?}", err);
             Err(map_sqlx_error(err))
         }
     }
 }
 
 pub async fn delete_config(
-    mut db: Connection<ConfigMonkeyDb>,
-    app_slug: &str,
-    env_slug: &str,
+    db: &mut PoolConnection<Postgres>,
+    config_id: &str,
 ) -> Result<(), ConfigsRepoError> {
-    let result = sqlx::query(
-        "delete from configs c \
-        using apps a, envs e \
-        where a.id = e.app_id and e.id = c.env_id and a.slug = $1 and e.slug = $2",
-    )
-    .bind(app_slug)
-    .bind(env_slug)
-    .execute(&mut *db)
-    .await;
+    let result = sqlx::query("delete from configs where id = $1::uuid")
+        .bind(config_id)
+        .execute(&mut *db)
+        .await;
 
     match result {
         Ok(result) => {
             if result.rows_affected() == 0 {
-                error!(
-                    "Env {} or app {} not found or no config exists",
-                    env_slug, app_slug
-                );
-                return Err(ConfigsRepoError::AppOrEnvNotFound);
+                error!("[delete_config] Config not found: {}", config_id);
+                return Err(ConfigsRepoError::NotFound);
             }
-            debug!(
-                "Successfully deleted config for app {} and env {} ",
-                app_slug, env_slug
-            );
             Ok(())
         }
         Err(err) => {
-            error!(
-                "Error deleting config for app {} and env {}: {:?}",
-                app_slug, env_slug, err
-            );
+            error!("[delete_config] Error deleting config: {:?}", err);
             Err(map_sqlx_error(err))
         }
     }

@@ -10,22 +10,23 @@ pub fn rocket_from_config(figment: Figment) -> Rocket<Build> {
         .mount(
             "/",
             routes![
-                routes::v1::apps_routes::get_apps,
-                routes::v1::apps_routes::create_app,
-                routes::v1::apps_routes::delete_app,
-                routes::v1::envs_routes::get_envs,
-                routes::v1::envs_routes::create_env,
-                routes::v1::envs_routes::delete_env,
+                routes::v1::domains_routes::create_domain,
+                routes::v1::domains_routes::get_domains,
+                routes::v1::domains_routes::delete_domain,
                 routes::v1::configs_routes::create_config,
+                routes::v1::configs_routes::get_configs,
                 routes::v1::configs_routes::get_config,
                 routes::v1::configs_routes::delete_config,
+                routes::v1::versions_routes::create_version,
+                routes::v1::versions_routes::get_versions,
             ],
         )
         .register(
             "/",
             catchers![
                 routes::v1::errors::default_catcher,
-                routes::v1::errors::not_found
+                routes::v1::errors::not_found,
+                routes::v1::errors::bad_request
             ],
         )
 }
