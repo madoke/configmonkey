@@ -15,7 +15,6 @@ A lightweight configuration service that supports managing app configurations ac
     - [Full stack](#full-stack)
   - [Building](#building)
   - [Running the tests](#running-the-tests)
-  - [API Reference](#api-reference)
   - [Contributing](#contributing)
     - [Issues](#issues)
     - [Pull requests](#pull-requests)
@@ -68,10 +67,6 @@ With the dependencies already started, run the tests using `cargo`. The test sui
 ```shell
 cargo test
 ```
-
-## API Reference
-
-Run an http server from the `docs` folder or head to [https://madoke.github.io/configmonkey/#/](https://madoke.github.io/configmonkey/#/)
 
 ## Contributing
 
